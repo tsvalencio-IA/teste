@@ -67,6 +67,41 @@
       .trim();
   }
 
+  const TEMPA_SINONIMOS = {
+    coxim: ['calco', 'suporte', 'apoio'],
+    calco: ['coxim', 'suporte', 'apoio'],
+    suporte: ['coxim', 'calco', 'apoio'],
+    cubo: ['rolamento', 'manga eixo'],
+    bandeja: ['braco', 'balanca'],
+    bieleta: ['tirante', 'barra estabilizadora'],
+    bateria: ['acumulador'],
+    oleo: ['lubrificante'],
+    filtro: ['elemento filtrante'],
+    amortecedor: ['amortecedores'],
+    pastilha: ['pastilhas'],
+    disco: ['discos'],
+    freio: ['freios'],
+    farol: ['lanterna', 'lente'],
+    parachoque: ['para choque'],
+    homocinetica: ['semi eixo', 'semieixo', 'junta homocinetica'],
+    semieixo: ['semi eixo', 'homocinetica'],
+    radiador: ['arrefecimento'],
+    bomba: ['conjunto bomba'],
+    combustivel: ['alimentacao'],
+    limpador: ['palheta'],
+    palheta: ['limpador']
+  };
+
+  function _tempaAlternativasToken(token) {
+    const t = _norm(token);
+    const out = new Set([t]);
+    (TEMPA_SINONIMOS[t] || []).forEach(x => out.add(_norm(x)));
+    Object.entries(TEMPA_SINONIMOS).forEach(([k, vals]) => {
+      if ((vals || []).map(_norm).includes(t)) out.add(_norm(k));
+    });
+    return Array.from(out).filter(Boolean);
+  }
+
   function _preferenciasSistemaVeiculo(veiculo) {
     const txt = _norm([
       veiculo?.tipo,
@@ -89,9 +124,9 @@
   // Preferência de tipo de veículo só ordena; nunca pode trazer item que não contenha a peça/serviço digitado.
   function _tempaPrepararConsultaPrecisa(texto) {
     let frase = _norm(texto)
-      .replace(/semi\s*eixo/g, 'semi eixo')
-      .replace(/semieixo/g, 'semi eixo')
-      .replace(/homocinetica/g, 'homocinetica')
+      .replace(/\bsemi\s*eixo\b/g, 'semi eixo')
+      .replace(/\bsemieixo\b/g, 'semi eixo')
+      .replace(/\bhomocinetica\b/g, 'homocinetica')
       .trim();
 
     const stop = new Set(['servico','servicos','serviço','serviços','de','da','do','das','dos','em','para','com','sem','uma','um','e','a','o','os','as','no','na']);
@@ -129,6 +164,22 @@
     if (token === 'tras') return /(tras|traseir)/.test(textoNorm);
     if (token === 'dir') return /(dir|direit|ld)/.test(textoNorm);
     if (token === 'esq') return /(esq|esquerd|le)/.test(textoNorm);
+    return false;
+  }
+
+  // Override limpo: a versao antiga acima preserva compatibilidade historica,
+  // mas alguns boundaries vieram quebrados em arquivos zipados. Esta versao
+  // tambem entende sinonimos reais de oficina/Cilia.
+  function _tempaTokenExiste(textoNorm, token) {
+    if (!token) return true;
+    const alternativas = _tempaAlternativasToken(token);
+    if (alternativas.some(alt => alt && textoNorm.includes(alt))) return true;
+    if (token.endsWith('s') && textoNorm.includes(token.slice(0, -1))) return true;
+    if (!token.endsWith('s') && textoNorm.includes(token + 's')) return true;
+    if (token === 'diant') return /\b(diant|dianteir)/.test(textoNorm);
+    if (token === 'tras') return /\b(tras|traseir)/.test(textoNorm);
+    if (token === 'dir') return /\b(dir|direit|ld)\b/.test(textoNorm);
+    if (token === 'esq') return /\b(esq|esquerd|le)\b/.test(textoNorm);
     return false;
   }
 
@@ -204,7 +255,7 @@
       let score = 0;
       let termScore = 0;
       for (const t of termos) {
-        if (entry.busca.includes(t)) termScore += t.length;
+        if (_tempaTokenExiste(entry.busca, t)) termScore += t.length;
       }
       score += termScore;
       preferenciasVeiculo.forEach((pref, idx) => {

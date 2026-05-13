@@ -1,12 +1,12 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
 <script>(function(){try{var t=localStorage.getItem("thiaguinho_theme");if(t==="light"||t==="dark")document.documentElement.setAttribute("data-theme",t);else document.documentElement.setAttribute("data-theme","dark");}catch(e){document.documentElement.setAttribute("data-theme","dark");}})();</script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-<title>thIAguinho â€” Selecionar Perfil</title>
+<title>thIAguinho — Selecionar Perfil</title>
 
-<!-- â•â•â• PWA â•â•â• -->
+<!-- ═══ PWA ═══ -->
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#00D4FF">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -125,7 +125,7 @@ body::after {
   flex-direction: column;
 }
 
-/* â•â•â• HEADER â•â•â• */
+/* ═══ HEADER ═══ */
 .brand-header {
   text-align: center;
   margin-bottom: 32px;
@@ -182,7 +182,7 @@ body::after {
   text-transform: uppercase;
 }
 
-/* â•â•â• TELA DE INSTRUÃ‡ÃƒO â•â•â• */
+/* ═══ TELA DE INSTRUÇÃO ═══ */
 .section-label {
   font-family: var(--ff-mono);
   font-size: 0.75rem;
@@ -205,7 +205,7 @@ body::after {
 .section-label::before { left: 0; }
 .section-label::after  { right: 0; transform: scaleX(-1); }
 
-/* â•â•â• CARDS DE PERFIL â•â•â• */
+/* ═══ CARDS DE PERFIL ═══ */
 .profile-grid {
   display: grid;
   grid-template-columns: 1fr;
@@ -300,7 +300,7 @@ body::after {
   flex-shrink: 0;
 }
 
-/* Cores especÃ­ficas por perfil */
+/* Cores específicas por perfil */
 .profile-card.cliente {
   --profile-color:     var(--brand);
   --profile-color-dim: var(--brand-dim);
@@ -322,7 +322,7 @@ body::after {
   --profile-color-dim: rgba(167, 139, 250, 0.12);
 }
 
-/* â•â•â• FOOTER â•â•â• */
+/* ═══ FOOTER ═══ */
 .footer {
   margin-top: auto;
   text-align: center;
@@ -368,7 +368,7 @@ body::after {
   border-top: 1px solid var(--border);
 }
 
-/* â•â•â• Responsivo â•â•â• */
+/* ═══ Responsivo ═══ */
 @media (min-height: 700px) {
   .container { padding-top: 56px; }
   .brand-header { margin-bottom: 44px; }
@@ -391,7 +391,7 @@ body::after {
     <div class="brand-header">
       <div class="brand-logo">T</div>
       <div class="brand-title">thIAguinho</div>
-      <div class="brand-subtitle">GestÃ£o Automotiva Inteligente</div>
+      <div class="brand-subtitle">Gestão Automotiva Inteligente</div>
     </div>
 
     <div class="section-label">SELECIONE SEU PERFIL</div>
@@ -399,48 +399,48 @@ body::after {
     <div class="profile-grid">
 
       <button class="profile-card cliente" onclick="entrar('cliente.html')">
-        <div class="profile-icon">ðŸ‘¤</div>
+        <div class="profile-icon">👤</div>
         <div class="profile-info">
           <div class="profile-name">Sou Cliente</div>
           <div class="profile-desc">Acompanhar minha O.S., scanner OBD, conversar com a oficina</div>
         </div>
-        <div class="profile-arrow">â€º</div>
+        <div class="profile-arrow">›</div>
       </button>
 
       <button class="profile-card oficial" onclick="entrar('clienteOficial.html')">
-        <div class="profile-icon">ðŸ›¡</div>
+        <div class="profile-icon">🛡</div>
         <div class="profile-info">
           <div class="profile-name">Sou Cliente Oficial</div>
-          <div class="profile-desc">PolÃ­cia, prefeitura, Ã³rgÃ£o pÃºblico â€” orÃ§amentos por ata de licitaÃ§Ã£o</div>
+          <div class="profile-desc">Polícia, prefeitura, órgão público — orçamentos por ata de licitação</div>
         </div>
-        <div class="profile-arrow">â€º</div>
+        <div class="profile-arrow">›</div>
       </button>
 
-      <button class="profile-card mecanico" onclick="entrar('login.html')">
-        <div class="profile-icon">ðŸ”§</div>
+      <button class="profile-card mecanico" onclick="entrar('index.html')">
+        <div class="profile-icon">🔧</div>
         <div class="profile-info">
-          <div class="profile-name">Sou MecÃ¢nico</div>
-          <div class="profile-desc">Painel da equipe tÃ©cnica, kanban, registrar serviÃ§os</div>
+          <div class="profile-name">Sou Mecânico</div>
+          <div class="profile-desc">Painel da equipe técnica, kanban, registrar serviços</div>
         </div>
-        <div class="profile-arrow">â€º</div>
+        <div class="profile-arrow">›</div>
       </button>
 
-      <button class="profile-card gestor" onclick="entrar('login.html')">
-        <div class="profile-icon">ðŸ¢</div>
+      <button class="profile-card gestor" onclick="entrar('index.html')">
+        <div class="profile-icon">🏢</div>
         <div class="profile-info">
           <div class="profile-name">Sou Gestor da Oficina</div>
-          <div class="profile-desc">Painel thIAguinho SoluÃ§Ãµes, financeiro, equipe, IA, relatÃ³rios</div>
+          <div class="profile-desc">Painel thIAguinho Soluções, financeiro, equipe, IA, relatórios</div>
         </div>
-        <div class="profile-arrow">â€º</div>
+        <div class="profile-arrow">›</div>
       </button>
 
-      <button class="profile-card admin" onclick="entrar('login.html')">
-        <div class="profile-icon">ðŸ‘‘</div>
+      <button class="profile-card admin" onclick="entrar('index.html')">
+        <div class="profile-icon">👑</div>
         <div class="profile-info">
           <div class="profile-name">Sou Administrador SaaS</div>
           <div class="profile-desc">Painel master, gerenciar oficinas, assinaturas</div>
         </div>
-        <div class="profile-arrow">â€º</div>
+        <div class="profile-arrow">›</div>
       </button>
 
     </div>
@@ -450,22 +450,22 @@ body::after {
         <div class="status-dot"></div>
         <span class="status-text">SISTEMA OPERACIONAL</span>
       </div>
-      <div class="copyright">Powered by thIAguinho SoluÃ§Ãµes Digitais Â· 2026</div>
+      <div class="copyright">Powered by thIAguinho Soluções Digitais · 2026</div>
     </div>
 
   </div>
 
   <script>
     function entrar(destino) {
-      // Feedback tÃ¡til em celulares Android (vibraÃ§Ã£o curta de 10ms)
+      // Feedback tátil em celulares Android (vibração curta de 10ms)
       if (navigator.vibrate) navigator.vibrate(10);
-      // Pequeno delay para sensaÃ§Ã£o de "pressed"
+      // Pequeno delay para sensação de "pressed"
       setTimeout(function() {
         window.location.href = destino;
       }, 80);
     }
   </script>
 <script src="js/theme.js"></script>
+<script src="js/uix-theme-fix.js"></script>
 </body>
 </html>
-

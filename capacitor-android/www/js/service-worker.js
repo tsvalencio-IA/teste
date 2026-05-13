@@ -12,7 +12,7 @@
  *
  * Powered by thIAguinho Soluções Digitais
  */
-const CACHE_VERSION = 'thiaguinho-comercial-hardening-20260512-5';
+const CACHE_VERSION = 'thiaguinho-comercial-hardening-20260513-7';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const RUNTIME_CACHE = `${CACHE_VERSION}-runtime`;
 
@@ -45,6 +45,7 @@ const PRECACHE_URLS_RAW = [
   './js/config.js',
   './js/links-publicos.js',
   './js/hardening-comercial.js',
+  './js/uix-theme-fix.js',
   './js/theme.js',
   './js/fiscal.js',
   './js/final-1010-regras-os.js',

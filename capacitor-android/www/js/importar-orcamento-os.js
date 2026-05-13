@@ -72,10 +72,18 @@
     return cells.map(valorNumericoDeCelula).filter(v => v !== null && (v > 0 || String(v) === '0'));
   }
 
+  function pareceCodigoItem(s){
+    const v = txt(s);
+    if (!v) return false;
+    if (/^(COD\.?|CODIGO|C[OÓ]DIGO|ITEM|REF\.?|REFERENCIA)$/i.test(v)) return false;
+    return /^[A-Z0-9][A-Z0-9.\-\/]{3,28}$/i.test(v) && /\d/.test(v) && !/\s/.test(v);
+  }
+
   function acharIndiceDescricao(cells){
     let best = -1, tam = 0;
     cells.forEach((c,i)=>{
       const s = txt(c);
+      if (pareceCodigoItem(s)) return;
       if (s.length > tam && !/^R\$/.test(s) && !/^\d+[,.]?\d*$/.test(s) && !/^(PECA|PEÇA|SERVICO|SERVIÇO)$/i.test(s)) {
         tam = s.length; best = i;
       }
@@ -96,12 +104,18 @@
     for (const c of clean) {
       const s = txt(c);
       if (/^(COD\.?|C[OÓ]DIGO)$/i.test(s)) continue;
-      if (/^[A-Z0-9][A-Z0-9.\-\/]{3,24}$/i.test(s) && !/^\d+[,.]?\d*$/.test(s) && !/^(TOTAL|VALOR|DESC)$/i.test(s)) { codigo = s; break; }
+      if (pareceCodigoItem(s) && !/^\d+[,.]?\d*$/.test(s) && !/^(TOTAL|VALOR|DESC)$/i.test(s)) { codigo = s; break; }
     }
 
     const idxDesc = acharIndiceDescricao(clean);
     let desc = idxDesc >= 0 ? clean[idxDesc] : '';
     desc = limparDescricaoItem(desc);
+    if (codigo && up(desc) === up(codigo)) {
+      const alternativa = clean
+        .map(limparDescricaoItem)
+        .find(s => s && up(s) !== up(codigo) && !pareceCodigoItem(s) && !/^(PECA|PECA|SERVICO|SERVICO|QTD|VALOR|DESC)$/i.test(up(s)));
+      if (alternativa) desc = alternativa;
+    }
     if (!desc || /^(CODIGO|CÓDIGO|DESCRICAO|DESCRIÇÃO|TIPO|VALOR|DESC|QTD|TMO)$/i.test(desc)) return null;
     if (IGNORAR_LINHA.test(up(desc)) && !/DESLOCAMENTO|GUINCHO/i.test(desc)) return null;
 
@@ -173,6 +187,21 @@
       const rows = document.querySelectorAll('#containerPecasOS [data-peca-avulsa="1"], #containerPecasOS > div:not(.cilia-peca-wrap)');
       const row = rows[rows.length-1];
       if(row){
+        // Em cliente normal a linha padrao nasce como select de estoque.
+        // Orcamento importado precisa virar peca avulsa real, senao codigo/descricao
+        // ficam presos no select e podem aparecer trocados na O.S.
+        if (!row.querySelector('.peca-desc-livre')) {
+          row.dataset.pecaAvulsa = '1';
+          row.style.cssText = 'display:grid;grid-template-columns:120px minmax(260px,1fr) 70px 100px 100px 32px;gap:8px;align-items:center;background:rgba(255,165,0,0.06);padding:8px;border-radius:3px;border:1px solid rgba(255,165,0,0.25);';
+          row.innerHTML = `
+            <input type="text" class="j-input peca-codigo" placeholder="Codigo original" style="font-family:var(--fm);font-size:0.78rem;">
+            <input type="text" class="j-input peca-desc-livre" placeholder="Descricao da peca" oninput="window.calcOSTotal()">
+            <input type="number" class="j-input peca-qtd" value="1" min="1" placeholder="Qtd" oninput="window.calcOSTotal()">
+            <input type="text" inputmode="decimal" class="j-input peca-custo" value="0,00" placeholder="Custo" oninput="window.calcOSTotal()">
+            <input type="text" inputmode="decimal" class="j-input peca-venda" value="0,00" placeholder="Venda" oninput="window.calcOSTotal()">
+            <button type="button" onclick="this.parentElement.remove();window.calcOSTotal()" style="background:rgba(255,59,59,0.1);border:1px solid rgba(255,59,59,0.3);border-radius:2px;color:var(--danger);cursor:pointer;width:32px;height:32px;">x</button>
+          `;
+        }
         const cod=row.querySelector('.peca-codigo'); if(cod) cod.value=p.codigo||'';
         const desc=row.querySelector('.peca-desc-livre'); if(desc) desc.value=p.desc||'';
         const qtd=row.querySelector('.peca-qtd'); if(qtd) qtd.value=p.qtd||1;

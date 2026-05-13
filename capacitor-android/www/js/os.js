@@ -3227,6 +3227,9 @@ window.renderCotacaoPecasAprovadasOS = function(os, aprovados, moedaFn) {
       <input type="hidden" class="cot-item-json" value="${_escVal(JSON.stringify(it))}">
       <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap;margin-bottom:8px;">
         <div style="min-width:220px;flex:1;">
+          <label style="display:inline-flex;align-items:center;gap:6px;font-family:var(--fm);font-size:.60rem;color:var(--muted);margin-bottom:5px;">
+            <input type="checkbox" class="cot-lote-check" style="width:auto;min-height:0;"> incluir na cotacao em lote
+          </label>
           <div style="font-family:var(--fm);font-size:.62rem;color:var(--success);font-weight:800;letter-spacing:1px;">COTACAO DA PECA APROVADA</div>
           <div style="font-size:.78rem;color:var(--text);font-weight:700;">${it.codigo ? '[' + escOS(it.codigo) + '] ' : ''}${escOS(it.desc || '-')}</div>
           <small style="font-family:var(--fm);font-size:.62rem;color:var(--muted);">Qtd ${escOS(it.qtd || 1)} | valor aprovado ${moedaLocal(it.valorFinal || 0)}</small>
@@ -3246,6 +3249,10 @@ window.renderCotacaoPecasAprovadasOS = function(os, aprovados, moedaFn) {
   return `<div id="cotacaoPecasOS" style="margin-top:14px;border-top:1px solid rgba(255,255,255,.12);padding-top:12px;">
     <div style="font-family:var(--fm);font-size:.72rem;color:var(--success);font-weight:800;letter-spacing:1px;margin-bottom:8px;">COTACAO E COMPRA DAS PECAS APROVADAS</div>
     <div style="font-family:var(--fm);font-size:.60rem;color:var(--muted);margin-bottom:8px;">Fluxo interno. Cotar nao significa comprar; comprado nao significa instalado; instalacao depende da execucao.</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;">
+      <button type="button" class="btn-outline" onclick="window.abrirCotacaoFornecedoresOSLote?.('${escOS(os?.id || '')}','marcadas')">COTAR PECAS MARCADAS</button>
+      <button type="button" class="btn-primary" onclick="window.abrirCotacaoFornecedoresOSLote?.('${escOS(os?.id || '')}','todos')">COTAR TODAS AS PECAS</button>
+    </div>
     ${blocos}
   </div>`;
 };
@@ -3624,30 +3631,29 @@ function _ciliaBuscarServicoTempa(peca, veiculoAtual) {
   const desc = String(peca?.desc || '').trim();
   const codigo = String(peca?.codigo || '').trim();
   if (!desc && !codigo) return null;
-  const descLimpa = _ciliaLimparDescParaTempa(desc);
-  const consultas = [
-    `substituir ${descLimpa}`,
-    `troca ${descLimpa}`,
-    `remover e instalar ${descLimpa}`,
-    descLimpa,
-    codigo
-  ].filter(Boolean);
-
+  const consultas = _ciliaConsultasTempaPeca(desc, codigo);
   const vistos = new Set();
+  const candidatos = [];
   for (const consulta of consultas) {
-    const resultados = window.tempaBuscarPorTexto(consulta, { veiculo: veiculoAtual, limite: 8 }) || [];
-    const seguros = [];
+    const resultados = window.tempaBuscarPorTexto(consulta, { veiculo: veiculoAtual, limite: 18 }) || [];
     for (const item of resultados) {
       const chave = `${item.codigo || ''}|${item.sistema || ''}|${item.operacao || ''}|${item.item || ''}`;
       if (vistos.has(chave)) continue;
       vistos.add(chave);
-      if (numBR(item.tempo || 0) > 0 && _ciliaTempaCompativelComVeiculo(item, veiculoAtual)) seguros.push(item);
+      if (numBR(item.tempo || 0) <= 0) continue;
+      if (!_ciliaTempaCompativelComVeiculo(item, veiculoAtual)) continue;
+      candidatos.push({ item, score: _ciliaScoreTempaPeca(item, desc, codigo) });
     }
-    // Regra conservadora: autoaplica somente quando ha um unico candidato seguro.
-    // Se houver ambiguidade (ex.: compacto x SUV/utilitario), exige escolha manual.
-    if (seguros.length === 1) return seguros[0];
-    if (seguros.length > 1) return null;
   }
+  if (!candidatos.length) return null;
+  candidatos.sort((a, b) => b.score - a.score || numBR(a.item.tempo) - numBR(b.item.tempo));
+  const top = candidatos[0];
+  const segundo = candidatos[1];
+  // Melhor que "unico candidato": autoaplica quando o primeiro tem forte
+  // aderencia textual e distancia suficiente do segundo. Caso contrario,
+  // continua exigindo escolha manual para nao inventar servico.
+  if (top.score >= 58 && (!segundo || top.score - segundo.score >= 10)) return top.item;
+  if (candidatos.length === 1 && top.score >= 38) return top.item;
   return null;
 }
 
@@ -3663,11 +3669,64 @@ function _ciliaTempaCompativelComVeiculo(itemTempa, veiculoAtual) {
   const tipoTabela = normalizar(extrairTipoVeiculoTempaOS({ sistemaTabela: itemTempa?.sistema, sistema: itemTempa?.sistema }, veiculoAtual || {}));
   const sistema = normalizar(itemTempa?.sistema || '');
   const alvo = `${tipoTabela} ${sistema}`;
-  if (!tipoOS || !alvo.trim()) return false;
+  if (!tipoOS || !alvo.trim()) return true;
   if (/\b(compacto|hatch|sedan|passeio|carro)\b/.test(tipoOS) && /\b(suv|utilitario|caminhao|onibus|microonibus|van)\b/.test(alvo)) return false;
   if (/\b(suv|utilitario|pickup|picape|van)\b/.test(tipoOS) && /\b(caminhao|onibus|microonibus)\b/.test(alvo)) return false;
   if (/\b(moto|motocicleta)\b/.test(tipoOS) && !/\b(moto|motocicleta)\b/.test(alvo)) return false;
   return true;
+}
+
+function _ciliaNormServicoTexto(v) {
+  return String(v || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
+function _ciliaConsultasTempaPeca(desc, codigo) {
+  const limpa = _ciliaLimparDescParaTempa(desc);
+  const n = _ciliaNormServicoTexto(limpa);
+  const termos = [
+    `substituir ${limpa}`,
+    `troca ${limpa}`,
+    `remover e instalar ${limpa}`,
+    `instalar ${limpa}`,
+    limpa,
+    codigo
+  ];
+  if (/\b(coxim|calco|suporte)\b/.test(n) && /\bmotor\b/.test(n)) termos.push('substituir coxim motor', 'substituir suporte motor', 'substituir calco motor');
+  if (/\b(cubo|rolamento)\b/.test(n) && /\broda\b/.test(n)) termos.push('substituir cubo roda', 'substituir rolamento roda', 'remover e instalar cubo roda');
+  if (/\bbateria\b/.test(n)) termos.push('substituir bateria', 'remover e instalar bateria');
+  if (/\b(pastilha|disco)\b/.test(n) && /\bfreio\b/.test(n)) termos.push('substituir freio', 'substituir pastilha freio', 'substituir disco freio');
+  if (/\bamortecedor\b/.test(n)) termos.push('substituir amortecedor', 'remover e instalar amortecedor');
+  if (/\bfiltro\b/.test(n)) termos.push('substituir filtro', 'troca filtro');
+  return [...new Set(termos.map(x => String(x || '').replace(/\s+/g, ' ').trim()).filter(Boolean))];
+}
+
+function _ciliaScoreTempaPeca(itemTempa, desc, codigo) {
+  const alvo = _ciliaNormServicoTexto([
+    itemTempa?.operacao, itemTempa?.item, itemTempa?.sistema, itemTempa?.codigo
+  ].filter(Boolean).join(' '));
+  const base = _ciliaNormServicoTexto([desc, codigo].filter(Boolean).join(' '));
+  const tokens = base.split(' ').filter(t => t.length >= 3 && !/^(cod|codigo|peca|original|genuin|paralel|lado|direit|esquerd|diant|tras|traseir|dianteir)$/.test(t));
+  const sinonimos = {
+    coxim: ['coxim', 'suporte', 'calco', 'apoio'],
+    calco: ['coxim', 'suporte', 'calco', 'apoio'],
+    cubo: ['cubo', 'rolamento'],
+    rolamento: ['rolamento', 'cubo'],
+    oleo: ['oleo', 'lubrificante'],
+    filtro: ['filtro', 'elemento filtrante'],
+    homocinetica: ['homocinetica', 'semi eixo', 'semieixo']
+  };
+  let score = 0;
+  tokens.forEach(t => {
+    const alts = sinonimos[t] || [t];
+    if (alts.some(a => alvo.includes(a))) score += 14 + Math.min(8, t.length);
+  });
+  if (base && alvo.includes(base)) score += 35;
+  if (/\b(substitui|troca|remover|instalar)\b/.test(alvo)) score += 10;
+  if (codigo && alvo.includes(_ciliaNormServicoTexto(codigo))) score += 18;
+  if (/\bmotor\b/.test(base) && /\bmotor\b/.test(alvo)) score += 10;
+  if (/\broda\b/.test(base) && /\broda\b/.test(alvo)) score += 10;
+  if (/\bfreio\b/.test(base) && /\bfreio\b/.test(alvo)) score += 10;
+  return score;
 }
 
 function _ciliaLimparDescParaTempa(desc) {

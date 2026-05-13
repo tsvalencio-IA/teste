@@ -3,7 +3,7 @@
 
   const W = window;
   const D = document;
-  const state = { osId: '', itemKey: '', os: null, item: null, fornecedores: [], mensagens: [] };
+  const state = { osId: '', itemKey: '', itemKeys: [], os: null, item: null, items: [], fornecedores: [], mensagens: [] };
 
   function $(id) { return D.getElementById(id); }
   function J() { return W.J || {}; }
@@ -73,6 +73,27 @@
     if (saved && (saved.key || saved.desc || saved.descricao)) return saved;
     return budgetItems(os).find(i => String(i.key) === String(key)) || { key };
   }
+  function getItems(os, keys) {
+    const out = [];
+    const vistos = new Set();
+    (keys || []).forEach(key => {
+      const k = String(key || '').trim();
+      if (!k || vistos.has(k)) return;
+      vistos.add(k);
+      const item = getItem(os, k);
+      if (!item.key) item.key = k;
+      out.push(item);
+    });
+    return out;
+  }
+  function itemTitulo(item) {
+    return (item?.codigo ? '[' + item.codigo + '] ' : '') + (item?.desc || item?.descricao || 'Peca');
+  }
+  function itensTitulo(items) {
+    const lista = Array.isArray(items) && items.length ? items : (state.item ? [state.item] : []);
+    if (lista.length === 1) return itemTitulo(lista[0]);
+    return lista.length + ' pecas aprovadas';
+  }
   function veiculoOS(os) {
     const v = (J().veiculos || []).find(x => x.id === os?.veiculoId) || {};
     return {
@@ -108,9 +129,13 @@
     if (f.preferencial || f.preferido || f.prioridade) score += 3;
     return score;
   }
-  function fornecedoresOrdenados(item) {
+  function fornecedoresOrdenados(itemOuItens) {
+    const itens = Array.isArray(itemOuItens) ? itemOuItens : [itemOuItens];
     return (J().fornecedores || [])
-      .map(f => Object.assign({}, f, { _scoreCotacao: scoreFornecedor(f, item) }))
+      .map(f => {
+        const score = itens.reduce((acc, item) => acc + scoreFornecedor(f, item), 0);
+        return Object.assign({}, f, { _scoreCotacao: score });
+      })
       .sort((a, b) => (b._scoreCotacao || 0) - (a._scoreCotacao || 0) || String(a.nome || '').localeCompare(String(b.nome || '')));
   }
   function publicBaseOk() {
@@ -183,20 +208,27 @@
 
   function renderResumo() {
     const os = state.os || {};
-    const item = state.item || {};
+    const items = state.items && state.items.length ? state.items : (state.item ? [state.item] : []);
     const v = veiculoOS(os);
     const cliente = (J().clientes || []).find(c => c.id === os.clienteId) || {};
+    const listaItens = items.map((item, idx) => `
+      <div style="display:grid;grid-template-columns:34px minmax(180px,1fr) 70px;gap:8px;align-items:center;border-top:1px dashed var(--border);padding:7px 0;">
+        <small style="font-family:var(--fm);color:var(--muted);">${idx + 1}</small>
+        <strong style="color:var(--text);font-size:.78rem;">${esc(itemTitulo(item))}</strong>
+        <small style="font-family:var(--fm);color:var(--cyan);text-align:right;">Qtd ${esc(item.qtd || 1)}</small>
+      </div>`).join('');
     $('cotRfqResumo').innerHTML = `
       <div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;">
         <div>
-          <div style="font-family:var(--fm);font-size:.62rem;color:var(--success);font-weight:800;letter-spacing:1px;">PECA APROVADA PARA COTACAO</div>
-          <div style="font-size:.88rem;color:var(--text);font-weight:800;">${item.codigo ? '[' + esc(item.codigo) + '] ' : ''}${esc(item.desc || item.descricao || '-')}</div>
-          <small style="font-family:var(--fm);font-size:.62rem;color:var(--muted);">Qtd ${esc(item.qtd || 1)} | aprovado na ${esc(osRefLabel(os))}</small>
+          <div style="font-family:var(--fm);font-size:.62rem;color:var(--success);font-weight:800;letter-spacing:1px;">${items.length > 1 ? 'PECAS APROVADAS PARA COTACAO' : 'PECA APROVADA PARA COTACAO'}</div>
+          <div style="font-size:.88rem;color:var(--text);font-weight:800;">${esc(itensTitulo(items))}</div>
+          <small style="font-family:var(--fm);font-size:.62rem;color:var(--muted);">aprovado na ${esc(osRefLabel(os))}</small>
         </div>
         <div style="font-family:var(--fm);font-size:.66rem;color:var(--cyan);text-align:right;">
           ${v.prefixo ? 'Prefixo ' + esc(v.prefixo) + '<br>' : ''}${v.placa ? 'Placa ' + esc(v.placa) + '<br>' : ''}${esc(v.nome)}${cliente.nome ? '<br>Cliente: ' + esc(cliente.nome) : ''}
         </div>
-      </div>`;
+      </div>
+      <div style="margin-top:8px;">${listaItens}</div>`;
   }
 
   function renderFornecedores() {
@@ -225,19 +257,23 @@
     }).join('') || '<div style="grid-column:1/-1;padding:18px;text-align:center;color:var(--muted);border:1px dashed var(--border);border-radius:4px;">Nenhum fornecedor encontrado. Cadastre fornecedores com WhatsApp/e-mail, segmento, categorias ou marcas.</div>';
   }
 
-  W.abrirCotacaoFornecedoresOS = function (osId, itemKey) {
+  function abrirCotacaoFornecedoresComItens(osId, itemKeys) {
     ensureModal();
     const os = (J().os || []).find(o => String(o.id) === String(osId));
     if (!os) { W.toast?.('Salve ou reabra a O.S. antes de enviar cotacao.', 'warn'); return; }
-    const item = getItem(os, itemKey);
+    const keys = (Array.isArray(itemKeys) ? itemKeys : [itemKeys]).map(k => String(k || '').trim()).filter(Boolean);
+    const items = getItems(os, keys);
+    if (!items.length) { W.toast?.('Selecione pelo menos uma peca aprovada para cotacao.', 'warn'); return; }
     state.osId = osId;
-    state.itemKey = itemKey;
+    state.itemKey = keys[0] || '';
+    state.itemKeys = keys;
     state.os = os;
-    state.item = item;
-    state.fornecedores = fornecedoresOrdenados(item);
+    state.item = items[0] || null;
+    state.items = items;
+    state.fornecedores = fornecedoresOrdenados(items);
     state.mensagens = [];
     $('cotRfqOsId').value = osId || '';
-    $('cotRfqItemKey').value = itemKey || '';
+    $('cotRfqItemKey').value = keys.join(',');
     $('cotRfqExpira').value = localDateAdd(3);
     $('cotRfqBusca').value = '';
     $('cotRfqObs').value = 'Favor informar valor unitario, marca, disponibilidade, prazo, frete e condicao de pagamento.';
@@ -249,6 +285,26 @@
     renderFornecedores();
     if (typeof W.abrirModal === 'function') W.abrirModal('modalCotacaoFornecedores');
     else $('modalCotacaoFornecedores').style.display = 'flex';
+  }
+
+  W.abrirCotacaoFornecedoresOS = function (osId, itemKey) {
+    abrirCotacaoFornecedoresComItens(osId, [itemKey]);
+  };
+
+  W.abrirCotacaoFornecedoresOSLote = function (osId, modo) {
+    const root = $('cotacaoPecasOS') || D;
+    const boxes = Array.from(root.querySelectorAll('.cotacao-peca-box[data-item-key]'));
+    let keys = [];
+    if (modo === 'todos') {
+      keys = boxes.map(box => box.getAttribute('data-item-key')).filter(Boolean);
+    } else {
+      keys = boxes
+        .filter(box => box.querySelector('.cot-lote-check')?.checked)
+        .map(box => box.getAttribute('data-item-key'))
+        .filter(Boolean);
+    }
+    if (!keys.length) { W.toast?.('Marque uma ou mais pecas aprovadas para cotar.', 'warn'); return; }
+    abrirCotacaoFornecedoresComItens(osId, keys);
   };
 
   W.fecharCotacaoFornecedoresOS = function () {
@@ -302,10 +358,37 @@
     return lines.filter(line => line !== null && line !== undefined).join('\n');
   }
 
+  function montarMensagem(f, link) {
+    const os = state.os || {};
+    const items = state.items && state.items.length ? state.items : (state.item ? [state.item] : []);
+    const v = veiculoOS(os);
+    const prioridade = $('cotRfqPrioridade')?.value || 'normal';
+    const obs = $('cotRfqObs')?.value?.trim() || '';
+    const lines = [
+      'Ola, ' + (f.nome || f.razao || 'fornecedor') + '.',
+      '',
+      'Solicito cotacao para ' + (items.length > 1 ? 'pecas aprovadas' : 'peca aprovada') + ' em O.S.:',
+      ...items.map((item, idx) => (idx + 1) + '. ' + itemTitulo(item) + ' | Qtd: ' + (item.qtd || 1)),
+      'Veiculo: ' + [v.prefixo ? 'prefixo ' + v.prefixo : '', v.placa ? 'placa ' + v.placa : '', v.nome].filter(Boolean).join(' / '),
+      osRefLabel(os),
+      'Prioridade: ' + prioridade,
+      '',
+      obs,
+      '',
+      'Responda pelo link:',
+      link,
+      '',
+      'Informe valor unitario, marca, disponibilidade, prazo, frete e condicao de cada item.'
+    ];
+    return lines.filter(line => line !== null && line !== undefined).join('\n');
+  }
+
   async function salvarSolicitacao(lista) {
     const database = db();
     const os = state.os || {};
     const item = state.item || {};
+    const items = state.items && state.items.length ? state.items : [item];
+    const itemKeys = state.itemKeys && state.itemKeys.length ? state.itemKeys : [state.itemKey];
     if (!database || !J().tid || !os.id) throw new Error('Banco/tenant/O.S. indisponivel.');
 
     const cotRef = database.collection('cotacoes_pecas').doc();
@@ -328,25 +411,28 @@
         status: 'pendente'
       };
     });
+    const itensPayload = items.map((it, idx) => ({
+      key: it.key || itemKeys[idx] || state.itemKey,
+      codigo: it.codigo || '',
+      desc: it.desc || it.descricao || '',
+      qtd: num(it.qtd || 1),
+      tipo: it.tipo || 'peca',
+      valorAprovado: num(it.valorFinal || it.valorUnit || 0)
+    }));
 
     const cotPayload = {
       tenantId: J().tid,
       osId: os.id,
       itemKey: state.itemKey,
+      itemKeys,
       status: 'enviada',
       origem: 'os_aprovada',
       prioridade: $('cotRfqPrioridade')?.value || 'normal',
       observacao: $('cotRfqObs')?.value?.trim() || '',
       expiraEm,
       expiraEmTs: expiraDate,
-      item: {
-        key: item.key || state.itemKey,
-        codigo: item.codigo || '',
-        desc: item.desc || item.descricao || '',
-        qtd: num(item.qtd || 1),
-        tipo: item.tipo || 'peca',
-        valorAprovado: num(item.valorFinal || item.valorUnit || 0)
-      },
+      item: itensPayload[0] || {},
+      itens: itensPayload,
       veiculo: v,
       fornecedores,
       createdAt: criadoEm,
@@ -362,6 +448,7 @@
         cotacaoId,
         osId: os.id,
         itemKey: state.itemKey,
+        itemKeys,
         token: f.token,
         fornecedorId: f.id || '',
         fornecedorNome: f.nome,
@@ -372,6 +459,7 @@
         expiraEm,
         expiraEmTs: expiraDate,
         item: cotPayload.item,
+        itens: cotPayload.itens,
         veiculo: { placa: v.placa, prefixo: v.prefixo, nome: v.nome, tipo: v.tipo },
         createdAt: criadoEm
       });
@@ -379,29 +467,33 @@
 
     const map = Object.assign({}, cotMap(os));
     const coletadas = W.coletarCotacoesPecasOS ? (W.coletarCotacoesPecasOS() || {}) : {};
-    const anterior = map[state.itemKey] || {};
-    const coletadaAtual = coletadas[state.itemKey] || {};
-    const opcoesAtuais = Array.isArray(coletadaAtual.opcoes) && coletadaAtual.opcoes.length
-      ? coletadaAtual.opcoes
-      : (Array.isArray(anterior.opcoes) ? anterior.opcoes : []);
-    const atual = Object.assign({ key: state.itemKey, item, opcoes: [] }, anterior, coletadaAtual, { opcoes: opcoesAtuais });
-    atual.item = atual.item || cotPayload.item;
-    atual.solicitacoes = Array.isArray(atual.solicitacoes) ? atual.solicitacoes.slice() : [];
-    atual.solicitacoes.push({
-      id: cotacaoId,
-      status: 'enviada',
-      createdAt: criadoEm,
-      expiraEm,
-      fornecedores
+    itensPayload.forEach((itemPayload, idx) => {
+      const key = itemPayload.key || itemKeys[idx] || state.itemKey;
+      const anterior = map[key] || {};
+      const coletadaAtual = coletadas[key] || {};
+      const opcoesAtuais = Array.isArray(coletadaAtual.opcoes) && coletadaAtual.opcoes.length
+        ? coletadaAtual.opcoes
+        : (Array.isArray(anterior.opcoes) ? anterior.opcoes : []);
+      const atual = Object.assign({ key, item: itemPayload, opcoes: [] }, anterior, coletadaAtual, { opcoes: opcoesAtuais });
+      atual.item = atual.item || itemPayload;
+      atual.solicitacoes = Array.isArray(atual.solicitacoes) ? atual.solicitacoes.slice() : [];
+      atual.solicitacoes.push({
+        id: cotacaoId,
+        status: 'enviada',
+        createdAt: criadoEm,
+        expiraEm,
+        fornecedorCount: fornecedores.length,
+        fornecedores
+      });
+      atual.updatedAt = criadoEm;
+      map[key] = atual;
     });
-    atual.updatedAt = criadoEm;
-    map[state.itemKey] = atual;
 
     const timeline = Array.isArray(os.timeline) ? os.timeline.slice() : [];
     timeline.push({
       dt: criadoEm,
       user: J().nome || 'Jarvis',
-      acao: 'Enviou cotacao de peca aprovada para ' + fornecedores.length + ' fornecedor(es).',
+      acao: 'Enviou cotacao de ' + itensPayload.length + ' peca(s) aprovada(s) para ' + fornecedores.length + ' fornecedor(es).',
       tipo: 'cotacao_pecas_envio',
       interno: true,
       cotacaoId
@@ -419,7 +511,7 @@
         tenantId: J().tid,
         tipo: 'cotacao_enviada',
         titulo: 'Cotacao enviada',
-        mensagem: 'Cotacao de ' + (item.desc || item.descricao || 'peca') + ' enviada para fornecedores.',
+        mensagem: 'Cotacao de ' + itensTitulo(items) + ' enviada para fornecedores.',
         perfilDestino: 'jarvis',
         entidade: 'ordens_servico',
         entidadeId: os.id,
@@ -443,6 +535,12 @@
     }));
     box.innerHTML = `
       <div style="font-family:var(--fm);font-size:.66rem;color:var(--success);font-weight:800;letter-spacing:1px;margin:4px 0 8px;">MENSAGENS PRONTAS - CONFIRME O ENVIO</div>
+      <div class="cot-msg-actions" style="margin-bottom:10px;">
+        <button type="button" class="btn-success" onclick="window.abrirCanalCotacaoTodos('whatsapp')">Abrir WhatsApp dos selecionados</button>
+        <button type="button" class="btn-outline" onclick="window.abrirCanalCotacaoTodos('email')">Abrir e-mails dos selecionados</button>
+        <button type="button" class="btn-ghost" onclick="window.copiarTodasMensagensCotacao()">Copiar todas</button>
+      </div>
+      <small style="display:block;color:var(--muted);font-family:var(--fm);font-size:.60rem;margin-bottom:8px;">WhatsApp Web/wa.me exige confirmacao humana por contato e o navegador pode bloquear varias abas; se isso acontecer, use Copiar todas ou abra uma por vez.</small>
       ${state.mensagens.map((m, idx) => {
         const c = fornecedorContato(m.fornecedor);
         return `<div class="cot-msg-card">
@@ -485,6 +583,52 @@
     }
   };
 
+  W.copiarTodasMensagensCotacao = async function () {
+    const textos = Array.from(D.querySelectorAll('#cotRfqMensagens .cot-msg-text')).map((ta, idx) => {
+      const fornecedor = state.mensagens[idx]?.fornecedor?.nome || ('Fornecedor ' + (idx + 1));
+      return '--- ' + fornecedor + ' ---\n' + ta.value;
+    }).join('\n\n');
+    if (!textos) { W.toast?.('Nao ha mensagens geradas.', 'warn'); return; }
+    try {
+      await navigator.clipboard.writeText(textos);
+      W.toast?.('Todas as mensagens foram copiadas.', 'ok');
+    } catch (_) {
+      W.toast?.('Nao foi possivel copiar em lote. Copie uma mensagem por vez.', 'warn');
+    }
+  };
+
+  W.abrirCanalCotacaoTodos = function (canal) {
+    if (!state.mensagens.length) { W.toast?.('Nao ha mensagens geradas.', 'warn'); return; }
+    if (canal === 'whatsapp') {
+      let abertas = 0;
+      state.mensagens.forEach((m, idx) => {
+        const c = fornecedorContato(m.fornecedor || {});
+        const phone = phoneBR(c.wpp);
+        if (!phone) return;
+        const ta = D.querySelectorAll('#cotRfqMensagens .cot-msg-text')[idx];
+        const msg = ta ? ta.value : m.mensagem;
+        setTimeout(() => W.open('https://wa.me/' + encodeURIComponent(phone) + '?text=' + encodeURIComponent(msg), '_blank'), idx * 450);
+        abertas++;
+      });
+      if (!abertas) W.toast?.('Nenhum fornecedor selecionado tem WhatsApp cadastrado.', 'warn');
+      else W.toast?.('Abrindo WhatsApp por fornecedor. Confirme cada envio manualmente.', 'ok');
+      return;
+    }
+    if (canal === 'email') {
+      state.mensagens.forEach((m, idx) => {
+        const c = fornecedorContato(m.fornecedor || {});
+        if (!c.email) return;
+        const ta = D.querySelectorAll('#cotRfqMensagens .cot-msg-text')[idx];
+        const msg = ta ? ta.value : m.mensagem;
+        setTimeout(() => {
+          W.location.href = 'mailto:' + encodeURIComponent(c.email) + '?subject=' + encodeURIComponent('Cotacao de peca - ' + osRefLabel(state.os)) + '&body=' + encodeURIComponent(msg);
+        }, idx * 350);
+      });
+      return;
+    }
+    W.copiarTodasMensagensCotacao();
+  };
+
   W.abrirCanalCotacao = async function (idx, canal) {
     const ta = D.querySelectorAll('#cotRfqMensagens .cot-msg-text')[idx];
     const msg = ta ? ta.value : state.mensagens[idx]?.mensagem || '';
@@ -509,8 +653,17 @@
 
   async function incorporarResposta(respId, resp) {
     const database = db();
-    if (!database || !resp || !resp.osId || !resp.itemKey || !J().tid) return;
-    const keyProcesso = respId + ':' + resp.osId + ':' + resp.itemKey;
+    if (!database || !resp || !resp.osId || !J().tid) return;
+    const respItens = Array.isArray(resp.itensResposta) && resp.itensResposta.length ? resp.itensResposta : [{
+      itemKey: resp.itemKey,
+      item: resp.item || {},
+      valorUnitario: resp.valorUnitario,
+      marca: resp.marca,
+      disponibilidade: resp.disponibilidade,
+      prazo: resp.prazo || resp.prazoDias,
+      observacao: resp.observacao
+    }];
+    const keyProcesso = respId + ':' + resp.osId + ':' + respItens.map(i => i.itemKey || i.key || '').join(',');
     W._cotRespSyncing = W._cotRespSyncing || new Set();
     if (W._cotRespSyncing.has(keyProcesso)) return;
     W._cotRespSyncing.add(keyProcesso);
@@ -520,43 +673,50 @@
       if (!snap.exists) return;
       const os = { id: snap.id, ...snap.data() };
       const map = cotMap(os);
-      const atual = Object.assign({ key: resp.itemKey, item: resp.item || {}, opcoes: [] }, map[resp.itemKey] || {});
-      atual.opcoes = Array.isArray(atual.opcoes) ? atual.opcoes.slice() : [];
-      if (atual.opcoes.some(o => o.respostaId === respId || o.id === 'resp-' + respId)) return;
-      const qtd = num(atual.item?.qtd || resp.item?.qtd || 1) || 1;
-      const valorUnitario = num(resp.valorUnitario);
-      const frete = num(resp.frete);
-      atual.opcoes.push({
-        id: 'resp-' + respId,
-        respostaId: respId,
-        cotacaoId: resp.cotacaoId || '',
-        fornecedorId: resp.fornecedorId || '',
-        fornecedor: resp.fornecedorNome || resp.responsavel || 'Fornecedor',
-        valorUnitario,
-        frete,
-        valorTotal: +(valorUnitario * qtd + frete).toFixed(2),
-        marca: resp.marca || '',
-        prazo: resp.prazo || resp.prazoDias || '',
-        condicao: [
-          resp.condicao || '',
-          resp.disponibilidade ? 'Disponibilidade: ' + resp.disponibilidade : '',
-          resp.marca ? 'Marca: ' + resp.marca : '',
-          frete ? 'Frete: ' + moeda(frete) : '',
-          resp.observacao || ''
-        ].filter(Boolean).join(' | '),
-        selecionado: false,
-        comprado: false,
-        origem: 'cotacao_publica',
-        recebidoEm: resp.createdAt || nowISO(),
-        updatedAt: nowISO()
+      respItens.forEach((ri, idx) => {
+        const itemKey = ri.itemKey || ri.key || ri.item?.key || resp.itemKeys?.[idx] || resp.itemKey;
+        if (!itemKey) return;
+        const itemResp = ri.item || (Array.isArray(resp.itens) ? resp.itens.find(i => String(i.key) === String(itemKey)) : null) || resp.item || {};
+        const atual = Object.assign({ key: itemKey, item: itemResp, opcoes: [] }, map[itemKey] || {});
+        atual.opcoes = Array.isArray(atual.opcoes) ? atual.opcoes.slice() : [];
+        if (atual.opcoes.some(o => o.respostaId === respId && String(o.itemKey || itemKey) === String(itemKey))) return;
+        const qtd = num(atual.item?.qtd || itemResp?.qtd || 1) || 1;
+        const valorUnitario = num(ri.valorUnitario);
+        if (valorUnitario <= 0) return;
+        const frete = num(resp.frete);
+        atual.opcoes.push({
+          id: 'resp-' + respId + '-' + itemKey,
+          itemKey,
+          respostaId: respId,
+          cotacaoId: resp.cotacaoId || '',
+          fornecedorId: resp.fornecedorId || '',
+          fornecedor: resp.fornecedorNome || resp.responsavel || 'Fornecedor',
+          valorUnitario,
+          frete,
+          valorTotal: +(valorUnitario * qtd + (idx === 0 ? frete : 0)).toFixed(2),
+          marca: ri.marca || resp.marca || '',
+          prazo: ri.prazo || resp.prazo || resp.prazoDias || '',
+          condicao: [
+            resp.condicao || '',
+            ri.disponibilidade || resp.disponibilidade ? 'Disponibilidade: ' + (ri.disponibilidade || resp.disponibilidade) : '',
+            ri.marca || resp.marca ? 'Marca: ' + (ri.marca || resp.marca) : '',
+            idx === 0 && frete ? 'Frete: ' + moeda(frete) : '',
+            ri.observacao || resp.observacao || ''
+          ].filter(Boolean).join(' | '),
+          selecionado: false,
+          comprado: false,
+          origem: 'cotacao_publica',
+          recebidoEm: resp.createdAt || nowISO(),
+          updatedAt: nowISO()
+        });
+        atual.updatedAt = nowISO();
+        map[itemKey] = atual;
       });
-      atual.updatedAt = nowISO();
-      map[resp.itemKey] = atual;
       const timeline = Array.isArray(os.timeline) ? os.timeline.slice() : [];
       timeline.push({
         dt: nowISO(),
         user: resp.fornecedorNome || 'Fornecedor',
-        acao: 'Recebeu resposta de cotacao para peca aprovada.',
+        acao: 'Recebeu resposta de cotacao para ' + respItens.length + ' peca(s) aprovada(s).',
         tipo: 'cotacao_pecas_resposta',
         interno: true,
         respostaId: respId
@@ -570,7 +730,7 @@
           tenantId: J().tid,
           tipo: 'cotacao_recebida',
           titulo: 'Cotacao recebida',
-          mensagem: 'Fornecedor respondeu cotacao de ' + (resp.item?.desc || 'peca') + '.',
+          mensagem: 'Fornecedor respondeu cotacao de ' + (respItens.length > 1 ? respItens.length + ' pecas' : (resp.item?.desc || 'peca')) + '.',
           perfilDestino: 'jarvis',
           entidade: 'ordens_servico',
           entidadeId: resp.osId,
