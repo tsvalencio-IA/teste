@@ -12,7 +12,7 @@
  *
  * Powered by thIAguinho Soluções Digitais
  */
-const CACHE_VERSION = 'thiaguinho-comercial-hardening-20260513-7';
+const CACHE_VERSION = 'thiaguinho-comercial-hardening-20260513-8';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const RUNTIME_CACHE = `${CACHE_VERSION}-runtime`;
 

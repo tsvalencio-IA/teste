@@ -3231,7 +3231,7 @@ window.renderCotacaoPecasAprovadasOS = function(os, aprovados, moedaFn) {
             <input type="checkbox" class="cot-lote-check" style="width:auto;min-height:0;"> incluir na cotacao em lote
           </label>
           <div style="font-family:var(--fm);font-size:.62rem;color:var(--success);font-weight:800;letter-spacing:1px;">COTACAO DA PECA APROVADA</div>
-          <div style="font-size:.78rem;color:var(--text);font-weight:700;">${it.codigo ? '[' + escOS(it.codigo) + '] ' : ''}${escOS(it.desc || '-')}</div>
+          <div data-cot-item-title="1" style="font-size:.78rem;color:var(--text);font-weight:700;">${it.codigo ? '[' + escOS(it.codigo) + '] ' : ''}${escOS(it.desc || '-')}</div>
           <small style="font-family:var(--fm);font-size:.62rem;color:var(--muted);">Qtd ${escOS(it.qtd || 1)} | valor aprovado ${moedaLocal(it.valorFinal || 0)}</small>
         </div>
         <div style="font-family:var(--fm);font-size:.66rem;color:${best ? 'var(--cyan)' : 'var(--muted)'};text-align:right;">
@@ -3240,8 +3240,10 @@ window.renderCotacaoPecasAprovadasOS = function(os, aprovados, moedaFn) {
       </div>
       <div class="cot-opcoes-list" style="display:grid;gap:6px;">${opcoes.map((op, idx) => cotacaoOpcaoRowHTML(op, idx, it.key, bestId)).join('')}</div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;align-items:center;">
+        <button type="button" class="btn-ghost" onclick="window.toggleTodasPecasCotacao?.(true)">SELECIONAR TODAS</button>
         <button type="button" class="btn-ghost" onclick="window.adicionarCotacaoOpcaoOS(this)">+ COTACAO</button>
         <button type="button" class="btn-primary" onclick="window.salvarCotacoesPecasOS('${escOS(os?.id || '')}')">SALVAR COTACOES</button>
+        <button type="button" class="btn-outline" onclick="window.abrirCotacaoFornecedoresOSLote?.('${escOS(os?.id || '')}','marcadas')">COTAR SELECIONADAS</button>
         <button type="button" class="btn-success" onclick="window.abrirEntradaNFCotacaoOS('${escOS(os?.id || '')}','${escOS(it.key)}')">DAR ENTRADA NF / VINCULAR</button>
       </div>
     </div>`;
@@ -3249,7 +3251,10 @@ window.renderCotacaoPecasAprovadasOS = function(os, aprovados, moedaFn) {
   return `<div id="cotacaoPecasOS" style="margin-top:14px;border-top:1px solid rgba(255,255,255,.12);padding-top:12px;">
     <div style="font-family:var(--fm);font-size:.72rem;color:var(--success);font-weight:800;letter-spacing:1px;margin-bottom:8px;">COTACAO E COMPRA DAS PECAS APROVADAS</div>
     <div style="font-family:var(--fm);font-size:.60rem;color:var(--muted);margin-bottom:8px;">Fluxo interno. Cotar nao significa comprar; comprado nao significa instalado; instalacao depende da execucao.</div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;">
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;align-items:center;position:sticky;top:0;z-index:5;background:var(--surf,#fff);padding:8px;border:1px solid var(--border);border-radius:4px;">
+      <label style="display:inline-flex;align-items:center;gap:6px;font-family:var(--fm);font-size:.64rem;color:var(--text);font-weight:800;">
+        <input type="checkbox" onchange="window.toggleTodasPecasCotacao?.(this.checked)" style="width:auto;min-height:0;"> SELECIONAR TODAS AS PECAS
+      </label>
       <button type="button" class="btn-outline" onclick="window.abrirCotacaoFornecedoresOSLote?.('${escOS(os?.id || '')}','marcadas')">COTAR PECAS MARCADAS</button>
       <button type="button" class="btn-primary" onclick="window.abrirCotacaoFornecedoresOSLote?.('${escOS(os?.id || '')}','todos')">COTAR TODAS AS PECAS</button>
     </div>

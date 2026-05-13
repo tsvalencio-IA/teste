@@ -1,0 +1,218 @@
+﻿{
+    "generatedAt":  "2026-05-13T12:38:07",
+    "base":  "VALENC_IA",
+    "final":  "C:\\Users\\Sony\\Desktop\\thIAguinho_SAAS_FINAL",
+    "changedCount":  42,
+    "files":  [
+                  {
+                      "path":  "cliente.html",
+                      "bytes":  105469,
+                      "sha256":  "7810B12A823C76C1C434B6B3F3044318B4D0C401C0FE7FAB10FBA2939697656A"
+                  },
+                  {
+                      "path":  "clienteOficial.html",
+                      "bytes":  72118,
+                      "sha256":  "878A8564A9703656C8EE63B1261A928D2DFC41E92C53F63E68C468FB26BF3633"
+                  },
+                  {
+                      "path":  "cotacao.html",
+                      "bytes":  6949,
+                      "sha256":  "F4E5B220CC4321AF6E67F290EE35BD07515D8C1F12F7E92653EF66250F597EEF"
+                  },
+                  {
+                      "path":  "equipe.html",
+                      "bytes":  128812,
+                      "sha256":  "E4C72FDD22D0E5F628BC63F39B63141F49EBF4C9CD87C93250FDEE4AD4AA3758"
+                  },
+                  {
+                      "path":  "index.html",
+                      "bytes":  15046,
+                      "sha256":  "414EEC5BE8EFE6E0B63F0307769B4FF92742205191C890938DC01D4407255C51"
+                  },
+                  {
+                      "path":  "jarvis.html",
+                      "bytes":  206865,
+                      "sha256":  "CF475BDB072B3CED4F6EAD8F73B23F307CF2F20BD299E601085A374AF84CE053"
+                  },
+                  {
+                      "path":  "selecionar-perfil.html",
+                      "bytes":  12926,
+                      "sha256":  "A6812E804DC1B0EB95733BC8A3B570BA23495782B3C0309E9276BC0B5094E988"
+                  },
+                  {
+                      "path":  "service-worker.js",
+                      "bytes":  4214,
+                      "sha256":  "F96CE8B9C39C90D39623DD77BCD624ECA1E9B1BA3AE057C8B2F9CB229C77D7CC"
+                  },
+                  {
+                      "path":  "superadmin.html",
+                      "bytes":  60568,
+                      "sha256":  "ED1576C7D45F613FB1FCA02C0C9658E7E3973C2A479AC245AA8D6C50864EAFEA"
+                  },
+                  {
+                      "path":  ".github\\workflows\\build-apk",
+                      "bytes":  1,
+                      "sha256":  "01BA4719C80B6FE911B091A7C05124B64EEECE964E09C058EF8F9805DACA546B"
+                  },
+                  {
+                      "path":  ".github\\workflows\\build-apk.yml",
+                      "bytes":  2913,
+                      "sha256":  "202715316EF364EB71D6A101CB96A1DD487076B3776A807DBCAACD1F90E91ED2"
+                  },
+                  {
+                      "path":  "capacitor-android\\www\\cliente.html",
+                      "bytes":  105469,
+                      "sha256":  "7810B12A823C76C1C434B6B3F3044318B4D0C401C0FE7FAB10FBA2939697656A"
+                  },
+                  {
+                      "path":  "capacitor-android\\www\\clienteOficial.html",
+                      "bytes":  72118,
+                      "sha256":  "878A8564A9703656C8EE63B1261A928D2DFC41E92C53F63E68C468FB26BF3633"
+                  },
+                  {
+                      "path":  "capacitor-android\\www\\cotacao.html",
+                      "bytes":  6949,
+                      "sha256":  "F4E5B220CC4321AF6E67F290EE35BD07515D8C1F12F7E92653EF66250F597EEF"
+                  },
+                  {
+                      "path":  "capacitor-android\\www\\equipe.html",
+                      "bytes":  128812,
+                      "sha256":  "E4C72FDD22D0E5F628BC63F39B63141F49EBF4C9CD87C93250FDEE4AD4AA3758"
+                  },
+                  {
+                      "path":  "capacitor-android\\www\\index.html",
+                      "bytes":  15046,
+                      "sha256":  "414EEC5BE8EFE6E0B63F0307769B4FF92742205191C890938DC01D4407255C51"
+                  },
+                  {
+                      "path":  "capacitor-android\\www\\jarvis.html",
+                      "bytes":  206865,
+                      "sha256":  "CF475BDB072B3CED4F6EAD8F73B23F307CF2F20BD299E601085A374AF84CE053"
+                  },
+                  {
+                      "path":  "capacitor-android\\www\\selecionar-perfil.html",
+                      "bytes":  12926,
+                      "sha256":  "A6812E804DC1B0EB95733BC8A3B570BA23495782B3C0309E9276BC0B5094E988"
+                  },
+                  {
+                      "path":  "capacitor-android\\www\\service-worker.js",
+                      "bytes":  4214,
+                      "sha256":  "F96CE8B9C39C90D39623DD77BCD624ECA1E9B1BA3AE057C8B2F9CB229C77D7CC"
+                  },
+                  {
+                      "path":  "capacitor-android\\www\\superadmin.html",
+                      "bytes":  60568,
+                      "sha256":  "ED1576C7D45F613FB1FCA02C0C9658E7E3973C2A479AC245AA8D6C50864EAFEA"
+                  },
+                  {
+                      "path":  "capacitor-android\\www\\firebase\\firestore.rules",
+                      "bytes":  17200,
+                      "sha256":  "DCE4A329B17DA31BC1658B32EA9892BC855186DA266FDEB31396954832E17AC2"
+                  },
+                  {
+                      "path":  "capacitor-android\\www\\js\\cotacao-fornecedor.js",
+                      "bytes":  9171,
+                      "sha256":  "AC6A7319CBA550F9F6210595107C8FF9E65E94579191E5B7403E877C683B5100"
+                  },
+                  {
+                      "path":  "capacitor-android\\www\\js\\cotacoes.js",
+                      "bytes":  39094,
+                      "sha256":  "273E9A073ECCADCBA9B1B0D2C5BD0FBFB677C46ED341196018DB92C6B910890C"
+                  },
+                  {
+                      "path":  "capacitor-android\\www\\js\\hardening-comercial.js",
+                      "bytes":  17993,
+                      "sha256":  "19BB8729D102A2E3C9A54881FB382F5D35A11B164E67456A669538299D67FBA8"
+                  },
+                  {
+                      "path":  "capacitor-android\\www\\js\\importar-orcamento-os.js",
+                      "bytes":  15310,
+                      "sha256":  "BFE90EB4EBB57717ABA30CCACB05E62CDD430D7103BB02EC269A4719AB554B83"
+                  },
+                  {
+                      "path":  "capacitor-android\\www\\js\\links-publicos.js",
+                      "bytes":  1747,
+                      "sha256":  "2511883CCA9DF3490CE8F75537FAD053A6C9DACC96F0807696C79BA0A487A3C6"
+                  },
+                  {
+                      "path":  "capacitor-android\\www\\js\\nfe-real-pro.js",
+                      "bytes":  47676,
+                      "sha256":  "44D656CA074B9E3B4874A1422B2B25CD03820576E8552A4A5343271EFCF71699"
+                  },
+                  {
+                      "path":  "capacitor-android\\www\\js\\os.js",
+                      "bytes":  240374,
+                      "sha256":  "85B1B31EF543CE3AC91C4090DED5CDEDF6739DC9CC82AAB2497DA52E4554E306"
+                  },
+                  {
+                      "path":  "capacitor-android\\www\\js\\service-worker.js",
+                      "bytes":  4214,
+                      "sha256":  "F96CE8B9C39C90D39623DD77BCD624ECA1E9B1BA3AE057C8B2F9CB229C77D7CC"
+                  },
+                  {
+                      "path":  "capacitor-android\\www\\js\\tabela-tempa.js",
+                      "bytes":  40889,
+                      "sha256":  "BB65E30588FF10D9F5F90E2ACFC943A136675E4EAB9DAA6ED02081B41FB0C332"
+                  },
+                  {
+                      "path":  "capacitor-android\\www\\js\\uix-theme-fix.js",
+                      "bytes":  6439,
+                      "sha256":  "76CBE532B866FECCA236C23926D898494B0A8C2878C68777CEADD71ECFF8FB37"
+                  },
+                  {
+                      "path":  "firebase\\firestore.rules",
+                      "bytes":  17200,
+                      "sha256":  "DCE4A329B17DA31BC1658B32EA9892BC855186DA266FDEB31396954832E17AC2"
+                  },
+                  {
+                      "path":  "js\\cotacao-fornecedor.js",
+                      "bytes":  9171,
+                      "sha256":  "AC6A7319CBA550F9F6210595107C8FF9E65E94579191E5B7403E877C683B5100"
+                  },
+                  {
+                      "path":  "js\\cotacoes.js",
+                      "bytes":  39094,
+                      "sha256":  "273E9A073ECCADCBA9B1B0D2C5BD0FBFB677C46ED341196018DB92C6B910890C"
+                  },
+                  {
+                      "path":  "js\\hardening-comercial.js",
+                      "bytes":  17993,
+                      "sha256":  "19BB8729D102A2E3C9A54881FB382F5D35A11B164E67456A669538299D67FBA8"
+                  },
+                  {
+                      "path":  "js\\importar-orcamento-os.js",
+                      "bytes":  15310,
+                      "sha256":  "BFE90EB4EBB57717ABA30CCACB05E62CDD430D7103BB02EC269A4719AB554B83"
+                  },
+                  {
+                      "path":  "js\\links-publicos.js",
+                      "bytes":  1747,
+                      "sha256":  "2511883CCA9DF3490CE8F75537FAD053A6C9DACC96F0807696C79BA0A487A3C6"
+                  },
+                  {
+                      "path":  "js\\nfe-real-pro.js",
+                      "bytes":  47676,
+                      "sha256":  "44D656CA074B9E3B4874A1422B2B25CD03820576E8552A4A5343271EFCF71699"
+                  },
+                  {
+                      "path":  "js\\os.js",
+                      "bytes":  240374,
+                      "sha256":  "85B1B31EF543CE3AC91C4090DED5CDEDF6739DC9CC82AAB2497DA52E4554E306"
+                  },
+                  {
+                      "path":  "js\\service-worker.js",
+                      "bytes":  4214,
+                      "sha256":  "F96CE8B9C39C90D39623DD77BCD624ECA1E9B1BA3AE057C8B2F9CB229C77D7CC"
+                  },
+                  {
+                      "path":  "js\\tabela-tempa.js",
+                      "bytes":  40889,
+                      "sha256":  "BB65E30588FF10D9F5F90E2ACFC943A136675E4EAB9DAA6ED02081B41FB0C332"
+                  },
+                  {
+                      "path":  "js\\uix-theme-fix.js",
+                      "bytes":  6439,
+                      "sha256":  "76CBE532B866FECCA236C23926D898494B0A8C2878C68777CEADD71ECFF8FB37"
+                  }
+              ]
+}

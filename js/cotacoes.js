@@ -68,9 +68,29 @@
     const cliente = (J().clientes || []).find(c => c.id === os?.clienteId);
     try { return U.buildBudgetItems ? (U.buildBudgetItems(os, cliente) || []) : []; } catch (_) { return []; }
   }
+  function itemFromCotacaoCard(key) {
+    const k = String(key || '');
+    if (!k) return null;
+    const cards = Array.from(D.querySelectorAll('.cotacao-peca-box[data-item-key]'));
+    const card = cards.find(box => String(box.getAttribute('data-item-key')) === k);
+    if (!card) return null;
+    try {
+      const raw = card.querySelector('.cot-item-json')?.value || '';
+      const item = raw ? JSON.parse(raw) : null;
+      if (item && (item.key || item.desc || item.descricao || item.codigo)) {
+        if (!item.key) item.key = k;
+        return item;
+      }
+    } catch (_) {}
+    const titulo = card.querySelector('[data-cot-item-title]')?.textContent || '';
+    if (titulo.trim()) return { key: k, desc: titulo.trim(), tipo: 'peca' };
+    return null;
+  }
   function getItem(os, key) {
     const saved = cotMap(os)[key]?.item;
-    if (saved && (saved.key || saved.desc || saved.descricao)) return saved;
+    if (saved && (saved.desc || saved.descricao || saved.codigo)) return saved;
+    const domItem = itemFromCotacaoCard(key);
+    if (domItem && (domItem.desc || domItem.descricao || domItem.codigo)) return domItem;
     return budgetItems(os).find(i => String(i.key) === String(key)) || { key };
   }
   function getItems(os, keys) {
@@ -289,6 +309,19 @@
 
   W.abrirCotacaoFornecedoresOS = function (osId, itemKey) {
     abrirCotacaoFornecedoresComItens(osId, [itemKey]);
+  };
+
+  W.toggleTodasPecasCotacao = function (checked) {
+    const root = $('cotacaoPecasOS') || D;
+    root.querySelectorAll('.cotacao-peca-box .cot-lote-check').forEach(cb => {
+      cb.checked = !!checked;
+      const label = cb.closest('label');
+      if (label) label.style.color = checked ? 'var(--success)' : 'var(--muted)';
+    });
+    root.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+      if (String(cb.getAttribute('onchange') || '').includes('toggleTodasPecasCotacao')) cb.checked = !!checked;
+    });
+    W.toast?.(checked ? 'Todas as pecas aprovadas foram marcadas para cotacao.' : 'Selecao de pecas limpa.', checked ? 'ok' : 'warn');
   };
 
   W.abrirCotacaoFornecedoresOSLote = function (osId, modo) {
