@@ -8,6 +8,49 @@
   function $(id) { return D.getElementById(id); }
   function J() { return W.J || {}; }
   function db() { return W.db || J().db || null; }
+  function centralDb() {
+    try {
+      return typeof W.initCentralFirebase === 'function' ? W.initCentralFirebase() : null;
+    } catch (_) {
+      return null;
+    }
+  }
+  function dbProject(database) {
+    try { return database?.app?.options?.projectId || ''; } catch (_) { return ''; }
+  }
+  function sameDatabase(a, b) {
+    const pa = dbProject(a);
+    const pb = dbProject(b);
+    return !!pa && !!pb && pa === pb;
+  }
+  function publicFirebaseConfig() {
+    try {
+      const cfg = typeof W.getActiveFirebaseConfig === 'function'
+        ? W.getActiveFirebaseConfig()
+        : (W.JARVIS_FB_CONFIG || null);
+      if (cfg && cfg.apiKey && cfg.projectId) {
+        return {
+          apiKey: cfg.apiKey,
+          authDomain: cfg.authDomain || '',
+          projectId: cfg.projectId,
+          storageBucket: cfg.storageBucket || '',
+          messagingSenderId: cfg.messagingSenderId || '',
+          appId: cfg.appId || ''
+        };
+      }
+    } catch (_) {}
+    return null;
+  }
+  function encodeFirebaseConfigParam(cfg) {
+    if (!cfg || !cfg.apiKey || !cfg.projectId) return '';
+    try {
+      const json = JSON.stringify(cfg);
+      const b64 = btoa(unescape(encodeURIComponent(json)));
+      return b64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
+    } catch (_) {
+      return '';
+    }
+  }
   function esc(v) {
     return String(v == null ? '' : v).replace(/[<>&"']/g, c => ({
       '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;', "'": '&#39;'
@@ -160,13 +203,17 @@
   }
   function publicBaseOk() {
     const cfg = W.THIA_PUBLIC_LINKS || {};
-    return !!(cfg.cotacaoFornecedor || cfg.baseUrl);
+    if (cfg.cotacaoFornecedor || cfg.baseUrl) return true;
+    try { return /^https?:$/i.test(W.location?.protocol || ''); } catch (_) { return false; }
   }
   function publicUrl(token) {
+    const params = { tenant: J().tid || '', token };
+    const cfgParam = encodeFirebaseConfigParam(publicFirebaseConfig());
+    if (cfgParam) params.fcfg = cfgParam;
     if (typeof W.thiaGetPublicUrl === 'function') {
-      return W.thiaGetPublicUrl('cotacaoFornecedor', { tenant: J().tid || '', token });
+      return W.thiaGetPublicUrl('cotacaoFornecedor', params);
     }
-    return 'cotacao.html?tenant=' + encodeURIComponent(J().tid || '') + '&token=' + encodeURIComponent(token);
+    return 'cotacao.html?' + new URLSearchParams(params).toString();
   }
   function osRefLabel(os) {
     return 'OS #' + String(os?.numero || os?.id || '').slice(-6).toUpperCase();
@@ -471,6 +518,7 @@
       createdAt: criadoEm,
       createdBy: J().nome || 'Jarvis'
     };
+    const firebaseConfigPublica = publicFirebaseConfig();
 
     const batch = database.batch();
     batch.set(cotRef, cotPayload);
@@ -494,6 +542,7 @@
         item: cotPayload.item,
         itens: cotPayload.itens,
         veiculo: { placa: v.placa, prefixo: v.prefixo, nome: v.nome, tipo: v.tipo },
+        firebaseConfig: firebaseConfigPublica,
         createdAt: criadoEm
       });
     });
@@ -538,6 +587,38 @@
     });
 
     await batch.commit();
+    const cdb = centralDb();
+    if (cdb && !sameDatabase(cdb, database)) {
+      const centralBatch = cdb.batch();
+      fornecedores.forEach(f => {
+        centralBatch.set(cdb.collection('cotacoes_publicas').doc(f.token), {
+          tenantId: J().tid,
+          cotacaoId,
+          osId: os.id,
+          itemKey: state.itemKey,
+          itemKeys,
+          token: f.token,
+          fornecedorId: f.id || '',
+          fornecedorNome: f.nome,
+          oficinaNome: J().oficina?.nome || J().oficina?.razao || J().nomeOficina || 'Oficina',
+          status: 'aberta',
+          prioridade: cotPayload.prioridade,
+          observacao: cotPayload.observacao,
+          expiraEm,
+          expiraEmTs: expiraDate,
+          item: cotPayload.item,
+          itens: cotPayload.itens,
+          veiculo: { placa: v.placa, prefixo: v.prefixo, nome: v.nome, tipo: v.tipo },
+          firebaseConfig: firebaseConfigPublica,
+          createdAt: criadoEm
+        });
+      });
+      try {
+        await centralBatch.commit();
+      } catch (err) {
+        throw new Error('Cotacao interna criada, mas o link publico nao foi publicado no Firebase central. Verifique regras/permissao em cotacoes_publicas: ' + (err.message || err));
+      }
+    }
     Object.assign(os, { cotacoesPecas: map, timeline, updatedAt: criadoEm });
     try {
       await database.collection('notificacoes_live').add({
@@ -700,7 +781,7 @@
     W.copiarMensagemCotacao(idx);
   };
 
-  async function incorporarResposta(respId, resp) {
+  async function incorporarResposta(respId, resp, origemDb) {
     const database = db();
     if (!database || !resp || !resp.osId || !J().tid) return;
     const respItens = Array.isArray(resp.itensResposta) && resp.itensResposta.length ? resp.itensResposta : [{
@@ -771,7 +852,7 @@
         respostaId: respId
       });
       await ref.update({ cotacoesPecas: map, timeline, updatedAt: nowISO() });
-      try { await database.collection('cotacoes_respostas').doc(respId).update({ sincronizadaEm: nowISO() }); } catch (_) {}
+      try { await (origemDb || database).collection('cotacoes_respostas').doc(respId).update({ sincronizadaEm: nowISO() }); } catch (_) {}
       const local = (J().os || []).find(o => o.id === resp.osId);
       if (local) Object.assign(local, { cotacoesPecas: map, timeline, updatedAt: nowISO() });
       try {
@@ -809,11 +890,28 @@
             if (ch.type !== 'added' && ch.type !== 'modified') return;
             const data = ch.doc.data() || {};
             if (data.sincronizadaEm) return;
-            incorporarResposta(ch.doc.id, { id: ch.doc.id, ...data });
+            incorporarResposta(ch.doc.id, { id: ch.doc.id, ...data }, db());
           });
         });
     } catch (err) {
       console.warn('Listener de cotacoes indisponivel', err);
+    }
+    try {
+      const cdb = centralDb();
+      if (cdb && !sameDatabase(cdb, db()) && !W._cotRespCentralListener) {
+        W._cotRespCentralListener = cdb.collection('cotacoes_respostas')
+          .where('tenantId', '==', J().tid)
+          .onSnapshot(snap => {
+            snap.docChanges().forEach(ch => {
+              if (ch.type !== 'added' && ch.type !== 'modified') return;
+              const data = ch.doc.data() || {};
+              if (data.sincronizadaEm) return;
+              incorporarResposta(ch.doc.id, { id: ch.doc.id, ...data }, cdb);
+            });
+          });
+      }
+    } catch (err) {
+      console.warn('Listener central de cotacoes indisponivel', err);
     }
   }
 
@@ -834,7 +932,7 @@
     const timer = setInterval(function () {
       patchRenderCotacoes();
       instalarListenerRespostas();
-      if (W._cotRespListener && W._cotacoesRenderPatched) clearInterval(timer);
+      if ((W._cotRespListener || W._cotRespCentralListener) && W._cotacoesRenderPatched) clearInterval(timer);
     }, 1200);
   });
 

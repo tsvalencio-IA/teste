@@ -12,7 +12,7 @@
  *
  * Powered by thIAguinho Soluções Digitais
  */
-const CACHE_VERSION = 'thiaguinho-comercial-hardening-20260513-11';
+const CACHE_VERSION = 'thiaguinho-comercial-hardening-20260513-13';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const RUNTIME_CACHE = `${CACHE_VERSION}-runtime`;
 
@@ -28,6 +28,9 @@ const PRECACHE_URLS_RAW = [
   './cotacao.html',
   './superadmin.html',
   './manifest.json',
+  './favicon.ico',
+  './assets/icon-192.png',
+  './assets/icon-512.png',
   './css/design.css',
   './js/core.js',
   './js/clientes.js',

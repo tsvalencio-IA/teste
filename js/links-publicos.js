@@ -20,6 +20,18 @@
     return String(url || '').trim().replace(/\/+$/, '');
   }
 
+  function runtimeBase() {
+    try {
+      const loc = window.location || {};
+      if (!/^https?:$/i.test(loc.protocol || '')) return '';
+      const path = String(loc.pathname || '/');
+      const dir = path.endsWith('/') ? path : path.slice(0, path.lastIndexOf('/') + 1);
+      return cleanBase(loc.origin + dir);
+    } catch (_) {
+      return '';
+    }
+  }
+
   function joinUrl(base, path) {
     base = cleanBase(base);
     path = String(path || '').replace(/^\/+/, '');
@@ -29,7 +41,7 @@
 
   window.thiaGetPublicUrl = function (kind, params) {
     const cfg = window.THIA_PUBLIC_LINKS || {};
-    const base = cleanBase(cfg.baseUrl);
+    const base = cleanBase(cfg.baseUrl) || runtimeBase();
     let url = '';
 
     if (kind === 'cotacaoFornecedor') url = cfg.cotacaoFornecedor || joinUrl(base, 'cotacao.html');
