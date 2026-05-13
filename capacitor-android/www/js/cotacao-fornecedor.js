@@ -6,7 +6,10 @@
   const params = new URLSearchParams(W.location.search);
   const token = (params.get('token') || '').trim();
   const tenant = (params.get('tenant') || params.get('t') || '').trim();
+  const cfgParam = (params.get('fcfg') || '').trim();
   let db = null;
+  let dbCentral = null;
+  let dbTenant = null;
   let cotacao = null;
 
   function $(id) { return D.getElementById(id); }
@@ -51,30 +54,58 @@
     return (item.codigo ? '[' + item.codigo + '] ' : '') + (item.desc || item.descricao || 'Peca solicitada');
   }
 
-  async function prepararTenant() {
-    if (!tenant) {
-      if (sessionStorage) sessionStorage.removeItem('j_firebase_config');
-      db = W.initFirebase();
-      return;
-    }
+  function dbProject(database) {
+    try { return database?.app?.options?.projectId || ''; } catch (_) { return ''; }
+  }
+  function addDbUnico(lista, database) {
+    if (!database) return;
+    const project = dbProject(database);
+    if (lista.some(item => dbProject(item) === project && project)) return;
+    lista.push(database);
+  }
+  function decodeFirebaseConfigParam() {
+    if (!cfgParam) return null;
     try {
-      const central = W.initCentralFirebase ? W.initCentralFirebase() : W.initFirebase();
-      const snap = await central.collection('oficinas').doc(tenant).get();
-      if (snap.exists) {
-        const d = snap.data() || {};
-        if (d.firebaseConfig) {
-          sessionStorage.setItem('j_firebase_config', JSON.stringify(d.firebaseConfig));
-          db = W.initFirebase();
-        } else {
-          db = W.initFirebase();
-        }
-        if (d.brand && W.aplicarBrand) W.aplicarBrand(d.brand);
-      } else {
-        db = W.initFirebase();
-      }
+      let b64 = cfgParam.replace(/-/g, '+').replace(/_/g, '/');
+      while (b64.length % 4) b64 += '=';
+      const json = decodeURIComponent(escape(atob(b64)));
+      const cfg = JSON.parse(json);
+      return cfg && cfg.apiKey && cfg.projectId ? cfg : null;
     } catch (err) {
-      console.warn('Tenant da cotacao indisponivel', err);
+      console.warn('Config Firebase do link invalida', err);
+      return null;
+    }
+  }
+  function prepararBancoPorConfig(cfg) {
+    if (!cfg || !cfg.apiKey || !cfg.projectId) return null;
+    try {
+      sessionStorage.setItem('j_firebase_config', JSON.stringify(cfg));
+      return W.initFirebase();
+    } catch (err) {
+      console.warn('Banco informado no link indisponivel', err);
+      return null;
+    }
+  }
+  async function prepararPortalPublico() {
+    try {
+      dbCentral = W.initCentralFirebase ? W.initCentralFirebase() : W.initFirebase();
+      db = dbCentral;
+    } catch (err) {
+      console.warn('Firebase central da cotacao indisponivel', err);
       db = W.initFirebase();
+      dbCentral = db;
+    }
+    const cfg = decodeFirebaseConfigParam();
+    if (cfg) dbTenant = prepararBancoPorConfig(cfg);
+  }
+  function prepararBancoOficina(data) {
+    const cfg = data?.firebaseConfig || null;
+    if (!cfg || !cfg.apiKey || !cfg.projectId) return;
+    try {
+      sessionStorage.setItem('j_firebase_config', JSON.stringify(cfg));
+      dbTenant = W.initFirebase();
+    } catch (err) {
+      console.warn('Banco da oficina indisponivel para resposta da cotacao', err);
     }
   }
 
@@ -128,16 +159,32 @@
       $('loadingCard').innerHTML = '<strong>Link incompleto.</strong><p class="sub">O token da cotacao nao foi informado.</p>';
       return;
     }
-    await prepararTenant();
+    await prepararPortalPublico();
     try {
-      const snap = await db.collection('cotacoes_publicas').doc(token).get();
+      let snap = await db.collection('cotacoes_publicas').doc(token).get();
+      if (!snap.exists && dbTenant && dbProject(dbTenant) !== dbProject(db)) {
+        snap = await dbTenant.collection('cotacoes_publicas').doc(token).get();
+        if (snap.exists) db = dbTenant;
+      }
       if (!snap.exists) {
         $('loadingCard').innerHTML = '<strong>Cotacao nao encontrada.</strong><p class="sub">Confirme se o link enviado pela oficina esta correto.</p>';
         return;
       }
-      renderCotacao({ id: snap.id, ...snap.data() });
+      const data = { id: snap.id, ...snap.data() };
+      prepararBancoOficina(data);
+      renderCotacao(data);
     } catch (err) {
       console.error(err);
+      if (dbTenant && dbProject(dbTenant) !== dbProject(db)) {
+        try {
+          const snap = await dbTenant.collection('cotacoes_publicas').doc(token).get();
+          if (snap.exists) {
+            db = dbTenant;
+            renderCotacao({ id: snap.id, ...snap.data() });
+            return;
+          }
+        } catch (_) {}
+      }
       $('loadingCard').innerHTML = '<strong>Erro ao carregar.</strong><p class="sub">Nao foi possivel abrir a cotacao agora. Tente novamente.</p>';
     }
   }
@@ -166,8 +213,11 @@
     const btn = $('btnEnviar');
     btn.disabled = true;
     btn.textContent = 'ENVIANDO...';
-    const respRef = db.collection('cotacoes_publicas').doc(token).collection('respostas').doc();
-    const flatRef = db.collection('cotacoes_respostas').doc(respRef.id);
+    const bancos = [];
+    addDbUnico(bancos, dbTenant);
+    addDbUnico(bancos, dbCentral || db);
+    if (!bancos.length) { status('Banco da cotacao indisponivel. Recarregue o link.', 'err'); return; }
+    const respId = bancos[0].collection('cotacoes_respostas').doc().id;
     const payload = {
       token,
       tenantId: cotacao.tenantId || tenant || '',
@@ -193,11 +243,21 @@
       createdAt: new Date().toISOString()
     };
     try {
-      const batch = db.batch();
-      batch.set(respRef, payload);
-      batch.set(flatRef, payload);
-      await batch.commit();
-      status('Cotacao enviada. A oficina recebera sua resposta no painel.', 'ok');
+      const resultados = await Promise.allSettled(bancos.map(database => {
+        const batch = database.batch();
+        batch.set(database.collection('cotacoes_publicas').doc(token).collection('respostas').doc(respId), payload);
+        batch.set(database.collection('cotacoes_respostas').doc(respId), payload);
+        return batch.commit();
+      }));
+      const ok = resultados.filter(r => r.status === 'fulfilled').length;
+      if (!ok) {
+        const erro = resultados.find(r => r.status === 'rejected')?.reason;
+        throw erro || new Error('Nenhum banco aceitou a resposta.');
+      }
+      status(ok === bancos.length
+        ? 'Cotacao enviada. A oficina recebera sua resposta no painel.'
+        : 'Cotacao enviada no portal publico. Se a oficina nao visualizar automaticamente, avise pelo WhatsApp.',
+        ok === bancos.length ? 'ok' : 'warn');
       D.querySelectorAll('input,select,textarea,button').forEach(el => {
         if (el.id !== 'btnEnviar') el.disabled = true;
       });

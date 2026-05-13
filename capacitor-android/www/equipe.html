@@ -249,15 +249,32 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
 .chat-msg audio{max-width:100%;margin-top:4px;}
 .chat-foot{padding:10px;border-top:1px solid var(--border);display:flex;gap:8px;align-items:center;}
 
+body.equipe-operacional .mec-financeiro-only{display:none!important;}
+.status-equipe-dados{display:none;margin:0 0 10px 0;padding:9px 11px;border:1px solid var(--border);border-radius:3px;background:var(--surf2);font-family:var(--fm);font-size:0.68rem;color:var(--muted2);letter-spacing:.4px;}
+.status-equipe-dados.warn{display:block;border-color:rgba(255,184,0,.35);color:var(--warn);background:rgba(255,184,0,.07);}
+.status-equipe-dados.err{display:block;border-color:rgba(255,59,59,.35);color:var(--danger);background:rgba(255,59,59,.07);}
 @media(max-width:600px){
-  .mec-kpis{grid-template-columns:1fr;}
+  .page{padding-top:58px;}
+  .content{padding:10px;}
+  .tab-bar{top:58px;overflow-x:auto;padding:0 10px;gap:4px;}
+  .tab{flex:0 0 auto;padding:10px 9px;font-size:0.58rem;letter-spacing:.9px;white-space:nowrap;}
+  .mec-kpis{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-bottom:10px;}
+  .mec-kpi{padding:10px;min-height:78px;}
+  .mec-kpi-label{font-size:0.50rem;letter-spacing:1px;line-height:1.2;}
+  .mec-kpi-val{font-size:1.45rem;line-height:1;}
   .form-row.c2,.form-row.c3{grid-template-columns:1fr;}
   .kanban-wrap{flex-direction:column;}
   .kanban-wrap{display:flex;overflow-x:hidden;}
   .k-col{min-width:100%;width:100%;max-height:none;}
   .k-col-body{max-height:none;min-height:86px;}
+  .k-col-head{padding:9px 10px;}
+  .k-card{padding:9px;}
   .topbar{padding:10px 14px;}
   .topbar-info{display:none;}
+  .logo{font-size:1rem;letter-spacing:3px;}
+  .topbar-right{gap:6px;}
+  .user-pill{padding:5px 7px;}
+  .btn-sair{padding:6px 8px;font-size:.55rem;letter-spacing:1px;}
   .content{padding:14px;}
   .tab-bar{padding:0 10px;overflow-x:auto;}
   .tab{padding:10px 14px;font-size:0.62rem;white-space:nowrap;}
@@ -331,7 +348,7 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
           <div class="mec-kpi-label">EM EXECUÇÃO AGORA</div>
           <div class="mec-kpi-val" id="kEmExec">0</div>
         </div>
-<div class="mec-kpi c3" id="kpiComissao" style="display:none; border-bottom: 2px solid var(--success); cursor:pointer; transition: background 0.2s;" onclick="abrirModal('modalExtratoFunc')" onmouseover="this.style.background='rgba(0, 255, 136, 0.05)'" onmouseout="this.style.background=''">
+<div class="mec-kpi c3 mec-financeiro-only" id="kpiComissao" style="display:none; border-bottom: 2px solid var(--success); cursor:pointer; transition: background 0.2s;" onclick="abrirModal('modalExtratoFunc')" onmouseover="this.style.background='rgba(0, 255, 136, 0.05)'" onmouseout="this.style.background=''">
           <div style="display:flex; justify-content:space-between; align-items:flex-start;">
             <div>
               <div class="mec-kpi-label" style="color:var(--success)">COMISSÕES A RECEBER</div>
@@ -348,6 +365,7 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
         </div>
         <button class="btn-primary" onclick="prepOS('add');abrirModal('modalOS')">+ NOVA O.S.</button>
       </div>
+      <div id="statusEquipeDados" class="status-equipe-dados"></div>
 
       <div class="kanban-wrap">
         <div class="k-col" style="border-top:2px solid var(--muted2)"><div class="k-col-head"><span class="k-col-label" style="color:var(--muted2)">TRIAGEM</span><span class="k-col-count" id="cnt-Aguardando">0</span></div><div class="k-col-body" id="kb-Aguardando"></div></div>
@@ -699,15 +717,29 @@ const db = fbApp.firestore();
 // STATE
 let dbOS=[], dbClientes=[], dbVeiculos=[], dbEstoque=[], dbMsgs=[];
 
+function roleEquipeAtual(){
+  return String(J.role || '').toLowerCase();
+}
+function podeVerFinanceiroEquipe(){
+  return ['admin','gestor','gerente','superadmin','financeiro'].includes(roleEquipeAtual());
+}
+function aplicarModoOperacionalEquipe(){
+  const operacional = !podeVerFinanceiroEquipe();
+  document.body?.classList.toggle('equipe-operacional', operacional);
+  const cardComissao = document.getElementById('kpiComissao');
+  if (cardComissao && operacional) cardComissao.style.display = 'none';
+}
+
 // INIT UI
-$('tbTenantNome').innerText = J.tnome;
-$('topNome').innerText = J.nome;
-$('topAv').innerText = J.nome.charAt(0).toUpperCase();
+$('tbTenantNome').innerText = J.tnome || 'Oficina';
+$('topNome').innerText = J.nome || 'Equipe';
+$('topAv').innerText = String(J.nome || 'E').charAt(0).toUpperCase();
 if($('topCargo')) {
   let roleDisplay = J.role || 'MECÂNICO';
   if (roleDisplay.toLowerCase() === 'equipe') roleDisplay = 'MECÂNICO';
   $('topCargo').innerText = roleDisplay.toUpperCase();
 }
+aplicarModoOperacionalEquipe();
 // TOAST
 function toast(msg,type='ok'){
   const el=document.createElement('div');
@@ -1389,6 +1421,24 @@ async function enviarFotosBatch(){
 // ============================================================
 // LISTENERS
 // ============================================================
+function statusEquipeDados(msg, tipo='warn'){
+  const el = document.getElementById('statusEquipeDados');
+  if (!el) return;
+  el.className = 'status-equipe-dados ' + (tipo || 'warn');
+  el.textContent = msg || '';
+  if (!msg) {
+    el.className = 'status-equipe-dados';
+    el.textContent = '';
+  }
+}
+function renderKanbanFalhaEquipe(msg){
+  ['Aguardando','Orcamento','Aprovado','Andamento','Pronto','Entregue'].forEach(s => {
+    const cEl = $('cnt-' + s);
+    const kEl = $('kb-' + s);
+    if (cEl) cEl.innerText = '0';
+    if (kEl) kEl.innerHTML = `<div style="text-align:center;padding:18px;color:var(--danger);font-family:var(--fm);font-size:0.68rem;line-height:1.45;">${msg}</div>`;
+  });
+}
 document.addEventListener('DOMContentLoaded',()=>{
   // Avisar sobre STT se não suportado
   if (!STT_SUPPORT) {
@@ -1398,9 +1448,15 @@ document.addEventListener('DOMContentLoaded',()=>{
     });
   }
 
+  statusEquipeDados('Sincronizando pátio da equipe...', 'warn');
   db.collection('ordens_servico').where('tenantId','==',J.tid).onSnapshot(snap=>{
     dbOS=snap.docs.map(d=>({id:d.id,...d.data()}));
+    statusEquipeDados('');
     renderKanban(); renderKPIs();
+  }, err => {
+    console.error('[Equipe] Falha ao carregar O.S.', err);
+    statusEquipeDados('Não foi possível carregar as O.S. da equipe. Verifique permissão do Firestore, tenant da sessão e conexão.', 'err');
+    renderKanbanFalhaEquipe('Falha ao carregar O.S.');
   });
   db.collection('clientes').where('tenantId','==',J.tid).onSnapshot(snap=>{
     dbClientes=snap.docs.map(d=>({id:d.id,...d.data()}));
@@ -1427,7 +1483,7 @@ document.addEventListener('DOMContentLoaded',()=>{
   db.collection('oficinas').doc(J.tid).onSnapshot(doc => {
     if (doc.exists) {
       const ofi = doc.data();
-      const podeVer = ofi.modulos && ofi.modulos.comissoes === true;
+      const podeVer = ofi.modulos && ofi.modulos.comissoes === true && podeVerFinanceiroEquipe();
       const cardComissao = document.getElementById('kpiComissao');
       
       if (cardComissao) cardComissao.style.display = podeVer ? 'block' : 'none';

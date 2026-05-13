@@ -1670,6 +1670,7 @@ window.salvarOS = async function() {
   const pecas = [];
   let totalPecas = 0;
   document.querySelectorAll('#containerPecasOS [data-peca-avulsa="1"], #containerPecasOS > div:not(.cilia-peca-wrap)').forEach(row => {
+    const wrapCilia = row.closest?.('.cilia-peca-wrap') || row;
     // Peça AVULSA (cliente governo)
     if (row.dataset?.pecaAvulsa === '1') {
       const codigo = row.querySelector('.peca-codigo')?.value || '';
@@ -1689,7 +1690,11 @@ window.salvarOS = async function() {
           ciliaBruto: numBR(row.dataset?.ciliaBruto || venda),
           ciliaValorLiquido: numBR(row.dataset?.ciliaLiquido || 0),
           ciliaDesconto: numBR(row.dataset?.ciliaDesconto || 0),
-          ciliaPieceIndex: row.dataset?.ciliaPieceIndex || row.closest?.('.cilia-peca-wrap')?.dataset?.ciliaPieceIndex || ''
+          ciliaPieceIndex: row.dataset?.ciliaPieceIndex || wrapCilia?.dataset?.ciliaPieceIndex || '',
+          ciliaGrupo: row.dataset?.ciliaGrupo || wrapCilia?.dataset?.ciliaGrupo || '',
+          ciliaGrupoOrdem: numBR(row.dataset?.ciliaGrupoOrdem || wrapCilia?.dataset?.ciliaGrupoOrdem || 0),
+          ciliaAgrupador: row.dataset?.ciliaAgrupador || wrapCilia?.dataset?.ciliaAgrupador || '',
+          ciliaPosicaoOrdem: numBR(row.dataset?.ciliaPosicaoOrdem || wrapCilia?.dataset?.ciliaPosicaoOrdem || 0)
         });
       }
       return;
@@ -3589,12 +3594,96 @@ window.importarCilia = async function(input) {
   }
 };
 
+function _ciliaNormGrupo(v) {
+  try {
+    const fn = OSU().normalizeText;
+    if (typeof fn === 'function') return fn(v);
+  } catch (_) {}
+  return String(v || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+}
+
+function _ciliaGrupoSistemaPeca(peca) {
+  const txt = _ciliaNormGrupo([peca?.desc, peca?.descricao, peca?.grupo, peca?.categoria, peca?.sistema, peca?.tipo, peca?.area, peca?.secao, peca?.codigo].filter(Boolean).join(' '));
+  const grupos = [
+    { nome: 'SUSPENSAO', ordem: 10, rx: /\b(amortec|batente|coifa|mola|bandeja|balanca|bieleta|pivo|barra estabil|coxim amort|terminal|axial)\b/ },
+    { nome: 'FREIO', ordem: 20, rx: /\b(freio|pastilha|disco|tambor|sapata|cilindro|pinca|flexivel|abs)\b/ },
+    { nome: 'DIRECAO', ordem: 30, rx: /\b(direcao|caixa direcao|barra direcao|terminal direcao|coluna direcao)\b/ },
+    { nome: 'RODAS / PNEUS', ordem: 40, rx: /\b(pneu|roda|cubo|rolamento|calota)\b/ },
+    { nome: 'MOTOR / ALIMENTACAO', ordem: 50, rx: /\b(motor|coxim motor|bomba combust|injecao|bico|vela|correia|filtro|oleo)\b/ },
+    { nome: 'ARREFECIMENTO', ordem: 60, rx: /\b(radiador|arrefec|ventoinha|reservatorio|mangueira agua|bomba d.?agua|agua)\b/ },
+    { nome: 'ELETRICA / ILUMINACAO', ordem: 70, rx: /\b(bateria|alternador|arranque|motor partida|chicote|modulo|sensor|lampada|farol|lanterna|fusivel)\b/ },
+    { nome: 'TRANSMISSAO', ordem: 80, rx: /\b(cambio|embreagem|homocinet|semieixo|junta|transmissao)\b/ },
+    { nome: 'FUNILARIA / LATARIA', ordem: 90, rx: /\b(para-?choque|parachoque|paralama|capo|porta|grade|painel frontal|longarina|lateral|teto|retrovisor|macaneta|lataria|funilaria)\b/ },
+    { nome: 'ACABAMENTO / VIDROS', ordem: 100, rx: /\b(vidro|parabrisa|para-brisa|borracha|acabamento|forro|moldura|guarnicao)\b/ }
+  ];
+  return grupos.find(g => g.rx.test(txt)) || { nome: 'OUTROS', ordem: 900 };
+}
+
+function _ciliaAgrupadorPeca(peca) {
+  let txt = _ciliaNormGrupo(peca?.desc || peca?.descricao || '');
+  txt = txt
+    .replace(/\[[^\]]+\]/g, ' ')
+    .replace(/\b(ld|le|dir|direito|direita|esq|esquerdo|esquerda|dianteiro|dianteira|diant|tras|traseiro|traseira|sup|superior|inf|inferior)\b/g, ' ')
+    .replace(/\b\d+[a-z0-9-]*\b/g, ' ')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  return txt || _ciliaNormGrupo(peca?.codigo || '');
+}
+
+function _ciliaPosicaoOrdemPeca(peca) {
+  const txt = _ciliaNormGrupo([peca?.desc, peca?.descricao, peca?.codigo].filter(Boolean).join(' '));
+  let eixo = 50;
+  if (/\b(dianteir|diant|frente)\b/.test(txt)) eixo = 10;
+  else if (/\b(traseir|tras|traz)\b/.test(txt)) eixo = 20;
+  let lado = 5;
+  if (/\b(ld|dir|direit)\b/.test(txt)) lado = 1;
+  else if (/\b(le|esq|esquerd)\b/.test(txt)) lado = 2;
+  let altura = 0;
+  if (/\b(superior|sup)\b/.test(txt)) altura = 1;
+  else if (/\b(inferior|inf)\b/.test(txt)) altura = 2;
+  return eixo * 100 + lado * 10 + altura;
+}
+
+function _ciliaOrdenarPecasImportadas(pecas) {
+  let grupoAnterior = '';
+  return (pecas || []).map((peca, idx) => {
+    const grupo = _ciliaGrupoSistemaPeca(peca);
+    peca.ciliaGrupo = peca.ciliaGrupo || grupo.nome;
+    peca.ciliaGrupoOrdem = peca.ciliaGrupoOrdem ?? grupo.ordem;
+    peca.ciliaAgrupador = peca.ciliaAgrupador || _ciliaAgrupadorPeca(peca);
+    peca.ciliaPosicaoOrdem = peca.ciliaPosicaoOrdem ?? _ciliaPosicaoOrdemPeca(peca);
+    peca.ciliaOrdemOriginal = peca.ciliaOrdemOriginal ?? idx;
+    return peca;
+  }).sort((a, b) =>
+    numBR(a.ciliaGrupoOrdem) - numBR(b.ciliaGrupoOrdem)
+    || String(a.ciliaAgrupador || '').localeCompare(String(b.ciliaAgrupador || ''))
+    || numBR(a.ciliaPosicaoOrdem) - numBR(b.ciliaPosicaoOrdem)
+    || numBR(a.ciliaOrdemOriginal) - numBR(b.ciliaOrdemOriginal)
+  ).map(peca => {
+    peca.ciliaAbreGrupo = String(peca.ciliaGrupo || '') !== grupoAnterior;
+    grupoAnterior = String(peca.ciliaGrupo || '');
+    return peca;
+  });
+}
+
+function _ciliaGrupoBadgeHTML(peca, destaque) {
+  if (!peca?.ciliaGrupo) return '';
+  const bg = destaque ? 'rgba(0,212,255,.12)' : 'rgba(0,212,255,.055)';
+  const border = destaque ? 'rgba(0,212,255,.36)' : 'rgba(0,212,255,.16)';
+  return `<div class="cilia-grupo-badge" style="display:flex;justify-content:space-between;gap:8px;align-items:center;margin:0 0 7px 0;padding:5px 7px;background:${bg};border:1px solid ${border};border-radius:3px;font-family:var(--fm);font-size:.58rem;letter-spacing:.8px;color:var(--cyan);text-transform:uppercase;">
+    <span>${destaque ? 'GRUPO ' : ''}${escOS(peca.ciliaGrupo)}</span>
+    ${peca.ciliaAgrupador ? `<small style="color:var(--muted);font-size:.54rem;text-transform:none;">${escOS(peca.ciliaAgrupador)}</small>` : ''}
+  </div>`;
+}
+
 async function _ciliaAdicionarPecas(pecas) {
   pecas = OSU().normalizeCiliaPieces ? OSU().normalizeCiliaPieces(pecas) : pecas;
   if (!pecas || !pecas.length) {
     if (typeof window.toast === 'function') window.toast('Nenhuma peça encontrada no arquivo Cília.', 'warn');
     return;
   }
+  pecas = _ciliaOrdenarPecasImportadas(pecas);
 
   const ehGov = typeof window._osClienteGovernamental === 'function' && window._osClienteGovernamental();
   const dadosGov = ehGov && typeof window._osDadosGovernamental === 'function' ? window._osDadosGovernamental() : null;
@@ -3611,7 +3700,12 @@ async function _ciliaAdicionarPecas(pecas) {
     const wrap = document.createElement('div');
     wrap.className = 'cilia-peca-wrap';
     wrap.dataset.ciliaPieceIndex = String(_ciliaPecaIndexCounter);
+    wrap.dataset.ciliaGrupo = p.ciliaGrupo || '';
+    wrap.dataset.ciliaGrupoOrdem = String(p.ciliaGrupoOrdem ?? '');
+    wrap.dataset.ciliaAgrupador = p.ciliaAgrupador || '';
+    wrap.dataset.ciliaPosicaoOrdem = String(p.ciliaPosicaoOrdem ?? '');
     wrap.style.cssText = 'background:rgba(0,212,255,0.04);border:1px solid rgba(0,212,255,0.20);border-radius:6px;padding:10px;margin-bottom:8px;';
+    wrap.insertAdjacentHTML('beforeend', _ciliaGrupoBadgeHTML(p, !!p.ciliaAbreGrupo));
 
     const div = document.createElement('div');
     const vBruto = numBR(p.venda || p.valor || 0);
@@ -3631,6 +3725,10 @@ async function _ciliaAdicionarPecas(pecas) {
     div.dataset.ciliaLiquido = String(numBR(p.ciliaValorLiquido || 0));
     div.dataset.ciliaDesconto = String(numBR(p.ciliaDesconto || 0));
     div.dataset.ciliaPieceIndex = String(_ciliaPecaIndexCounter);
+    div.dataset.ciliaGrupo = p.ciliaGrupo || '';
+    div.dataset.ciliaGrupoOrdem = String(p.ciliaGrupoOrdem ?? '');
+    div.dataset.ciliaAgrupador = p.ciliaAgrupador || '';
+    div.dataset.ciliaPosicaoOrdem = String(p.ciliaPosicaoOrdem ?? '');
     div.innerHTML = `
       <input type="text" class="j-input peca-codigo" value="${_escVal(p.codigo)}" placeholder="Código OEM" style="font-family:var(--fm);font-size:0.78rem;" title="Código OEM (editável)">
       <input type="text" class="j-input peca-desc-livre" value="${_escVal(p.desc)}" placeholder="Descrição da peça" oninput="window.calcOSTotal()">
@@ -4068,10 +4166,22 @@ window._ciliaAplicarTempaSelecionada = function(btn) {
 };
 
 window.renderCiliaPecaOSRow = function(p, servicosRelacionados = []) {
+  const grupo = _ciliaGrupoSistemaPeca(p || {});
+  p = Object.assign({}, p, {
+    ciliaGrupo: p?.ciliaGrupo || grupo.nome,
+    ciliaGrupoOrdem: p?.ciliaGrupoOrdem ?? grupo.ordem,
+    ciliaAgrupador: p?.ciliaAgrupador || _ciliaAgrupadorPeca(p || {}),
+    ciliaPosicaoOrdem: p?.ciliaPosicaoOrdem ?? _ciliaPosicaoOrdemPeca(p || {})
+  });
   const wrap = document.createElement('div');
   wrap.className = 'cilia-peca-wrap';
   wrap.dataset.ciliaPieceIndex = String(p.ciliaPieceIndex ?? document.querySelectorAll('#containerPecasOS [data-cilia-piece-index]').length);
+  wrap.dataset.ciliaGrupo = p.ciliaGrupo || '';
+  wrap.dataset.ciliaGrupoOrdem = String(p.ciliaGrupoOrdem ?? '');
+  wrap.dataset.ciliaAgrupador = p.ciliaAgrupador || '';
+  wrap.dataset.ciliaPosicaoOrdem = String(p.ciliaPosicaoOrdem ?? '');
   wrap.style.cssText = 'border:1px solid rgba(0,212,255,0.18);border-radius:6px;padding:8px;margin-bottom:8px;background:rgba(0,212,255,0.035);';
+  wrap.insertAdjacentHTML('beforeend', _ciliaGrupoBadgeHTML(p, false));
 
   const qtd = numBR(p.qtd || p.q || 1) || 1;
   const vBruto = numBR(p.venda || p.v || p.ciliaBruto || 0);
@@ -4082,6 +4192,10 @@ window.renderCiliaPecaOSRow = function(p, servicosRelacionados = []) {
   div.dataset.ciliaLiquido = String(p.ciliaValorLiquido || 0);
   div.dataset.ciliaDesconto = String(p.ciliaDesconto || 0);
   div.dataset.ciliaPieceIndex = String(wrap.dataset.ciliaPieceIndex);
+  div.dataset.ciliaGrupo = p.ciliaGrupo || '';
+  div.dataset.ciliaGrupoOrdem = String(p.ciliaGrupoOrdem ?? '');
+  div.dataset.ciliaAgrupador = p.ciliaAgrupador || '';
+  div.dataset.ciliaPosicaoOrdem = String(p.ciliaPosicaoOrdem ?? '');
   div.style.cssText = 'display:grid;grid-template-columns:120px 1fr 60px 100px 32px;gap:8px;align-items:center;background:rgba(0,212,255,0.06);padding:8px;border-radius:4px;border:1px solid rgba(0,212,255,0.18);';
   div.innerHTML = `
     <input type="text" class="j-input peca-codigo" value="${_escVal(p.codigo || '')}" placeholder="Código Cília/OEM" style="font-family:var(--fm);font-size:0.78rem;">
