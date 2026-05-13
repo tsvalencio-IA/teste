@@ -43,6 +43,13 @@
     if (exp && exp < new Date().toISOString().slice(0, 10)) return true;
     return false;
   }
+  function itensCotacao(data) {
+    const itens = Array.isArray(data?.itens) && data.itens.length ? data.itens : [data?.item || {}];
+    return itens.map((item, idx) => Object.assign({ key: item.key || data?.itemKeys?.[idx] || data?.itemKey || ('item-' + idx) }, item));
+  }
+  function tituloItem(item) {
+    return (item.codigo ? '[' + item.codigo + '] ' : '') + (item.desc || item.descricao || 'Peca solicitada');
+  }
 
   async function prepararTenant() {
     if (!tenant) {
@@ -77,16 +84,38 @@
     $('cotacaoCard').classList.remove('hide');
     $('formCard').classList.remove('hide');
 
-    const item = data.item || {};
+    const itens = itensCotacao(data);
+    const item = itens[0] || {};
     const veic = data.veiculo || {};
     $('oficinaNome').textContent = data.oficinaNome || 'Oficina';
-    $('pecaTitulo').innerHTML = (item.codigo ? '[' + esc(item.codigo) + '] ' : '') + esc(item.desc || 'Peca solicitada');
+    $('pecaTitulo').innerHTML = itens.length > 1 ? esc(itens.length + ' pecas solicitadas') : esc(tituloItem(item));
     $('pecaObs').textContent = data.observacao || 'Preencha a cotacao com os dados reais disponiveis.';
-    $('pecaQtd').textContent = String(item.qtd || 1);
+    $('pecaQtd').textContent = itens.length > 1 ? String(itens.length) + ' itens' : String(item.qtd || 1);
     $('veiculoInfo').textContent = [veic.prefixo ? 'Prefixo ' + veic.prefixo : '', veic.placa ? 'Placa ' + veic.placa : '', veic.nome || 'Veiculo'].filter(Boolean).join(' / ');
     $('prioridadeInfo').textContent = data.prioridade || 'normal';
     $('validadeInfo').textContent = fmtDate(data.expiraEm);
     $('respNome').value = data.fornecedorNome || '';
+    const itensBox = $('itensCotacao');
+    if (itensBox) {
+      itensBox.innerHTML = itens.map((it, idx) => `
+        <div class="cot-item-resposta" data-item-key="${esc(it.key || '')}">
+          <div class="cot-item-head">
+            <strong>${esc(tituloItem(it))}</strong>
+            <small>Qtd ${esc(it.qtd || 1)}</small>
+          </div>
+          <div class="grid">
+            <div><label>Valor unitario</label><input class="item-valor" inputmode="decimal" placeholder="0,00" ${idx === 0 ? 'autofocus' : ''}></div>
+            <div><label>Marca</label><input class="item-marca" placeholder="Marca ofertada"></div>
+            <div><label>Disponibilidade</label><select class="item-disponibilidade"><option>Disponivel imediato</option><option>Disponivel hoje</option><option>Encomenda</option><option>Indisponivel</option></select></div>
+          </div>
+          <div class="grid" style="margin-top:10px;">
+            <div><label>Prazo</label><input class="item-prazo" placeholder="Ex: 2h, hoje, 1 dia"></div>
+            <div><label>Observacao do item</label><input class="item-observacao" placeholder="Garantia, alternativo, original..."></div>
+          </div>
+        </div>`).join('');
+      const legacy = D.querySelector('.legacy-single-fields');
+      if (legacy) legacy.classList.add('hide');
+    }
 
     if (isExpired(data)) {
       status('Esta cotacao esta vencida ou fechada. Fale com a oficina antes de enviar.', 'warn');
@@ -115,8 +144,23 @@
 
   W.enviarRespostaCotacaoFornecedor = async function () {
     if (!db || !cotacao || !token) return;
-    const valorUnitario = num($('valorUnitario').value);
-    if (valorUnitario <= 0) { status('Informe o valor unitario da peca.', 'err'); return; }
+    const itensBase = itensCotacao(cotacao);
+    const linhas = Array.from(D.querySelectorAll('.cot-item-resposta'));
+    const itensResposta = linhas.length ? linhas.map((row, idx) => {
+      const item = itensBase[idx] || {};
+      return {
+        itemKey: row.getAttribute('data-item-key') || item.key || '',
+        item,
+        valorUnitario: num(row.querySelector('.item-valor')?.value),
+        marca: row.querySelector('.item-marca')?.value.trim() || '',
+        disponibilidade: row.querySelector('.item-disponibilidade')?.value || '',
+        prazo: row.querySelector('.item-prazo')?.value.trim() || '',
+        observacao: row.querySelector('.item-observacao')?.value.trim() || ''
+      };
+    }).filter(x => x.valorUnitario > 0) : [];
+    if (!itensResposta.length) { status('Informe o valor unitario de pelo menos uma peca.', 'err'); return; }
+    const primeira = itensResposta[0];
+    const valorUnitario = primeira.valorUnitario;
     if (isExpired(cotacao)) { status('Cotacao vencida ou fechada. Fale com a oficina.', 'err'); return; }
 
     const btn = $('btnEnviar');
@@ -129,16 +173,19 @@
       tenantId: cotacao.tenantId || tenant || '',
       cotacaoId: cotacao.cotacaoId || '',
       osId: cotacao.osId || '',
-      itemKey: cotacao.itemKey || '',
+      itemKey: cotacao.itemKey || primeira.itemKey || '',
+      itemKeys: cotacao.itemKeys || itensResposta.map(i => i.itemKey).filter(Boolean),
       fornecedorId: cotacao.fornecedorId || '',
       fornecedorNome: cotacao.fornecedorNome || $('respNome').value.trim() || 'Fornecedor',
       responsavel: $('respNome').value.trim(),
       contato: $('respContato').value.trim(),
-      item: cotacao.item || {},
+      item: cotacao.item || primeira.item || {},
+      itens: cotacao.itens || itensBase,
+      itensResposta,
       valorUnitario,
-      marca: $('marca').value.trim(),
-      disponibilidade: $('disponibilidade').value,
-      prazo: $('prazo').value.trim(),
+      marca: primeira.marca || '',
+      disponibilidade: primeira.disponibilidade || '',
+      prazo: primeira.prazo || '',
       frete: num($('frete').value),
       condicao: $('condicao').value.trim(),
       observacao: $('observacao').value.trim(),

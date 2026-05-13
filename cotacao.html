@@ -28,6 +28,11 @@
     .info span{display:block;color:var(--muted);font-family:var(--mono);font-size:.62rem;text-transform:uppercase;margin-bottom:4px}
     .info b{font-size:.92rem}
     button{border:0;border-radius:5px;min-height:46px;padding:0 16px;font-weight:800;cursor:pointer;color:#06111f;background:var(--ok)}
+    .itens-cotacao{display:grid;gap:10px;margin-top:12px}
+    .cot-item-resposta{border:1px solid var(--line);border-radius:6px;background:rgba(255,255,255,.035);padding:10px}
+    .cot-item-head{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:8px}
+    .cot-item-head strong{font-size:.9rem}
+    .cot-item-head small{font-family:var(--mono);color:var(--muted)}
     button.secondary{background:transparent;color:var(--text);border:1px solid var(--line)}
     button:disabled{opacity:.55;cursor:not-allowed}
     .actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:14px}
@@ -63,6 +68,7 @@
         <div><span>Prioridade</span><b id="prioridadeInfo">Normal</b></div>
         <div><span>Validade</span><b id="validadeInfo">-</b></div>
       </div>
+      <div id="itensCotacao" class="itens-cotacao"></div>
     </section>
 
     <section class="card hide" id="formCard">
@@ -71,8 +77,8 @@
           <div><label>Responsavel</label><input id="respNome" autocomplete="name" placeholder="Seu nome"></div>
           <div><label>Telefone / WhatsApp</label><input id="respContato" autocomplete="tel" placeholder="(00) 00000-0000"></div>
         </div>
-        <div class="grid" style="margin-top:10px;">
-          <div><label>Valor unitario</label><input id="valorUnitario" inputmode="decimal" placeholder="0,00" required></div>
+        <div class="grid legacy-single-fields" style="margin-top:10px;">
+          <div><label>Valor unitario</label><input id="valorUnitario" inputmode="decimal" placeholder="0,00"></div>
           <div><label>Marca</label><input id="marca" placeholder="Marca ofertada"></div>
           <div><label>Disponibilidade</label><select id="disponibilidade"><option>Disponivel imediato</option><option>Disponivel hoje</option><option>Encomenda</option><option>Indisponivel</option></select></div>
         </div>
@@ -97,5 +103,6 @@
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
   <script src="js/config.js"></script>
   <script src="js/cotacao-fornecedor.js"></script>
+  <script src="js/uix-theme-fix.js"></script>
 </body>
 </html>
