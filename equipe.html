@@ -1419,8 +1419,8 @@ document.addEventListener('DOMContentLoaded',()=>{
     renderChat();
     const nLidas=dbMsgs.filter(m=>m.sender==='admin'&&!m.lidaEquipe&&m.para===J.fid).length;
     const badge=$('chatTabBadge');
-    if(nLidas>0){badge.classList.remove('d-none');badge.innerText=nLidas;}
-    else badge.classList.add('d-none');
+    if(badge && nLidas>0){badge.classList.remove('d-none');badge.innerText=nLidas;}
+    else if(badge) badge.classList.add('d-none');
   });
 
 // VERIFICA PERMISSÃO DE COMISSÃO DO GESTOR E MONTA EXTRATO
@@ -2096,6 +2096,7 @@ function renderTimeline(){
 // ============================================================
 function renderChat(){
   const msgs=$('chatMsgs');
+  if(!msgs) return;
   if(!dbMsgs.length){msgs.innerHTML='<div style="text-align:center;color:var(--muted);font-family:var(--fm);font-size:0.72rem;padding:30px;">Sem mensagens ainda</div>';return;}
   msgs.innerHTML=dbMsgs.map(m=>{
     if(m.sender==='admin'&&!m.lidaEquipe&&m.para===J.fid) db.collection('chat_equipe').doc(m.id).update({lidaEquipe:true}).catch(()=>{});

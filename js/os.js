@@ -3181,6 +3181,13 @@ function melhorCotacaoOS(cot) {
   return opcoes.slice().sort((a, b) => cotacaoValorOS(a.valorUnitario) - cotacaoValorOS(b.valorUnitario))[0];
 }
 
+function cotacaoResumoMelhorHTML(best, moedaLocal) {
+  if (!best) return 'Registre 1 ou mais cotacoes recebidas';
+  const nome = best.fornecedor || best.fornecedorNome || 'Fornecedor';
+  const prazo = best.prazo ? `<br><small style="color:var(--muted);">Prazo: ${escOS(best.prazo)}</small>` : '';
+  return `Menor cotacao: <b>${escOS(nome)}</b><br>${moedaLocal(cotacaoValorOS(best.valorUnitario))} un.${prazo}`;
+}
+
 function fornecedorOptionsCotacaoOS(selected) {
   const opts = ['<option value="">Fornecedor livre</option>'];
   (window.J?.fornecedores || []).forEach(f => {
@@ -3191,14 +3198,15 @@ function fornecedorOptionsCotacaoOS(selected) {
 
 function cotacaoOpcaoRowHTML(op, idx, key, bestId) {
   const id = op?.id || ('cot-' + Date.now() + '-' + idx + '-' + Math.random().toString(36).slice(2, 7));
-  const marcada = op?.selecionado || id === bestId;
+  const marcada = op?.selecionado || false;
   const comprado = op?.comprado ? 'checked' : '';
-  return `<div class="cot-opcao-row" data-cot-id="${escOS(id)}" style="display:grid;grid-template-columns:minmax(150px,1fr) minmax(150px,1fr) 95px 90px minmax(140px,1fr) 72px 82px 32px;gap:7px;align-items:center;background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.08);border-radius:3px;padding:7px;">
-    <select class="j-select cot-fornecedor-id" style="font-size:.70rem;">${fornecedorOptionsCotacaoOS(op?.fornecedorId || '')}</select>
-    <input class="j-input cot-fornecedor" value="${_escVal(op?.fornecedor || '')}" placeholder="Fornecedor" style="font-size:.70rem;">
-    <input class="j-input cot-valor" inputmode="decimal" value="${cotacaoValorOS(op?.valorUnitario).toFixed(2).replace('.', ',')}" placeholder="Valor un." style="font-size:.70rem;">
-    <input class="j-input cot-prazo" value="${_escVal(op?.prazo || '')}" placeholder="Prazo" style="font-size:.70rem;">
-    <input class="j-input cot-condicao" value="${_escVal(op?.condicao || op?.obs || '')}" placeholder="Condicao / obs." style="font-size:.70rem;">
+  const bestClass = id === bestId ? ' is-best-cotacao' : '';
+  return `<div class="cot-opcao-row${bestClass}" data-cot-id="${escOS(id)}" style="display:grid;grid-template-columns:minmax(150px,1fr) minmax(150px,1fr) 95px 90px minmax(140px,1fr) 72px 82px 32px;gap:7px;align-items:center;background:${id === bestId ? 'rgba(0,255,136,.08)' : 'rgba(255,255,255,.035)'};border:1px solid ${id === bestId ? 'rgba(0,255,136,.42)' : 'rgba(255,255,255,.08)'};border-radius:3px;padding:7px;">
+    <select class="j-select cot-fornecedor-id" onchange="window.preencherFornecedorCotacaoOS?.(this);window.atualizarAnaliseCotacaoBox?.(this.closest('.cotacao-peca-box'))" style="font-size:.70rem;">${fornecedorOptionsCotacaoOS(op?.fornecedorId || '')}</select>
+    <input class="j-input cot-fornecedor" value="${_escVal(op?.fornecedor || '')}" placeholder="Fornecedor livre ou nome recebido" oninput="window.atualizarAnaliseCotacaoBox?.(this.closest('.cotacao-peca-box'))" style="font-size:.70rem;">
+    <input class="j-input cot-valor" inputmode="decimal" value="${cotacaoValorOS(op?.valorUnitario).toFixed(2).replace('.', ',')}" placeholder="Valor un." oninput="window.atualizarAnaliseCotacaoBox?.(this.closest('.cotacao-peca-box'))" style="font-size:.70rem;">
+    <input class="j-input cot-prazo" value="${_escVal(op?.prazo || '')}" placeholder="Prazo" oninput="window.atualizarAnaliseCotacaoBox?.(this.closest('.cotacao-peca-box'))" style="font-size:.70rem;">
+    <input class="j-input cot-condicao" value="${_escVal(op?.condicao || op?.obs || '')}" placeholder="Condicao / obs." oninput="window.atualizarAnaliseCotacaoBox?.(this.closest('.cotacao-peca-box'))" style="font-size:.70rem;">
     <label title="Cotacao escolhida para compra" style="display:flex;align-items:center;justify-content:center;gap:4px;font-family:var(--fm);font-size:.58rem;color:var(--cyan);"><input type="radio" name="cot-escolhida-${escOS(key)}" class="cot-escolhida" ${marcada ? 'checked' : ''}> Comprar</label>
     <label title="Marcar como ja comprado" style="display:flex;align-items:center;justify-content:center;gap:4px;font-family:var(--fm);font-size:.58rem;color:var(--success);"><input type="checkbox" class="cot-comprado" ${comprado}> Comprado</label>
     <button type="button" onclick="this.closest('.cot-opcao-row').remove()" title="Remover cotacao" style="height:30px;background:rgba(255,59,59,.08);border:1px solid rgba(255,59,59,.25);color:var(--danger);border-radius:3px;cursor:pointer;">x</button>
@@ -3211,6 +3219,63 @@ window.adicionarCotacaoOpcaoOS = function(btn) {
   if (!box || !list) return;
   const key = box.dataset.itemKey || '';
   list.insertAdjacentHTML('beforeend', cotacaoOpcaoRowHTML({}, list.querySelectorAll('.cot-opcao-row').length, key, ''));
+  window.atualizarAnaliseCotacaoBox?.(box);
+};
+
+window.preencherFornecedorCotacaoOS = function(select) {
+  const row = select?.closest?.('.cot-opcao-row');
+  const input = row?.querySelector?.('.cot-fornecedor');
+  const nome = select?.selectedOptions?.[0]?.textContent?.trim() || '';
+  if (input && select?.value && (!input.value || input.value === 'Fornecedor livre')) input.value = nome;
+};
+
+function lerOpcoesCotacaoBox(box) {
+  const opcoes = [];
+  box?.querySelectorAll?.('.cot-opcao-row').forEach((row, idx) => {
+    const fornecedorId = row.querySelector('.cot-fornecedor-id')?.value || '';
+    const fornecedorSelect = row.querySelector('.cot-fornecedor-id');
+    const fornecedorOpt = fornecedorId ? (fornecedorSelect?.selectedOptions?.[0]?.textContent || '') : '';
+    const fornecedorLivre = row.querySelector('.cot-fornecedor')?.value?.trim() || '';
+    const valorUnitario = cotacaoValorOS(row.querySelector('.cot-valor')?.value || 0);
+    const prazo = row.querySelector('.cot-prazo')?.value?.trim() || '';
+    const condicao = row.querySelector('.cot-condicao')?.value?.trim() || '';
+    if (!fornecedorId && !fornecedorLivre && !valorUnitario && !prazo && !condicao) return;
+    opcoes.push({
+      id: row.dataset.cotId || ('cot-' + Date.now() + '-' + idx),
+      row,
+      fornecedorId,
+      fornecedor: fornecedorLivre || fornecedorOpt,
+      valorUnitario,
+      prazo,
+      condicao,
+      selecionado: !!row.querySelector('.cot-escolhida')?.checked,
+      comprado: !!row.querySelector('.cot-comprado')?.checked
+    });
+  });
+  return opcoes;
+}
+
+window.atualizarAnaliseCotacaoBox = function(box) {
+  if (!box) return null;
+  const moedaLocal = typeof moedaOS === 'function' ? moedaOS : (v => 'R$ ' + cotacaoValorOS(v).toFixed(2).replace('.', ','));
+  const opcoes = lerOpcoesCotacaoBox(box);
+  const best = melhorCotacaoOS({ opcoes });
+  box.querySelectorAll('.cot-opcao-row').forEach(row => {
+    const isBest = !!best && row.dataset.cotId === best.id;
+    row.classList.toggle('is-best-cotacao', isBest);
+    row.style.background = isBest ? 'rgba(0,255,136,.08)' : 'rgba(255,255,255,.035)';
+    row.style.borderColor = isBest ? 'rgba(0,255,136,.42)' : 'rgba(255,255,255,.08)';
+  });
+  const resumo = box.querySelector('.cot-melhor-resumo');
+  if (resumo) {
+    resumo.style.color = best ? 'var(--success)' : 'var(--muted)';
+    resumo.innerHTML = cotacaoResumoMelhorHTML(best, moedaLocal);
+  }
+  return best;
+};
+
+window.atualizarAnaliseCotacoesOS = function() {
+  document.querySelectorAll('#cotacaoPecasOS .cotacao-peca-box').forEach(box => window.atualizarAnaliseCotacaoBox(box));
 };
 
 window.renderCotacaoPecasAprovadasOS = function(os, aprovados, moedaFn) {
@@ -3228,23 +3293,21 @@ window.renderCotacaoPecasAprovadasOS = function(os, aprovados, moedaFn) {
       <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap;margin-bottom:8px;">
         <div style="min-width:220px;flex:1;">
           <label style="display:inline-flex;align-items:center;gap:6px;font-family:var(--fm);font-size:.60rem;color:var(--muted);margin-bottom:5px;">
-            <input type="checkbox" class="cot-lote-check" style="width:auto;min-height:0;"> incluir na cotacao em lote
+            <input type="checkbox" class="cot-lote-check" style="width:auto;min-height:0;"> incluir no pedido aos fornecedores
           </label>
           <div style="font-family:var(--fm);font-size:.62rem;color:var(--success);font-weight:800;letter-spacing:1px;">COTACAO DA PECA APROVADA</div>
           <div data-cot-item-title="1" style="font-size:.78rem;color:var(--text);font-weight:700;">${it.codigo ? '[' + escOS(it.codigo) + '] ' : ''}${escOS(it.desc || '-')}</div>
           <small style="font-family:var(--fm);font-size:.62rem;color:var(--muted);">Qtd ${escOS(it.qtd || 1)} | valor aprovado ${moedaLocal(it.valorFinal || 0)}</small>
         </div>
-        <div style="font-family:var(--fm);font-size:.66rem;color:${best ? 'var(--cyan)' : 'var(--muted)'};text-align:right;">
-          ${best ? `Melhor compra: <b>${escOS(best.fornecedor || best.fornecedorNome || 'Fornecedor')}</b><br>${moedaLocal(cotacaoValorOS(best.valorUnitario))} un.` : 'Cadastre 1 ou mais cotacoes'}
+        <div class="cot-melhor-resumo" style="font-family:var(--fm);font-size:.66rem;color:${best ? 'var(--success)' : 'var(--muted)'};text-align:right;">
+          ${cotacaoResumoMelhorHTML(best, moedaLocal)}
         </div>
       </div>
       <div class="cot-opcoes-list" style="display:grid;gap:6px;">${opcoes.map((op, idx) => cotacaoOpcaoRowHTML(op, idx, it.key, bestId)).join('')}</div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;align-items:center;">
-        <button type="button" class="btn-ghost" onclick="window.toggleTodasPecasCotacao?.(true)">SELECIONAR TODAS</button>
-        <button type="button" class="btn-ghost" onclick="window.adicionarCotacaoOpcaoOS(this)">+ COTACAO</button>
-        <button type="button" class="btn-primary" onclick="window.salvarCotacoesPecasOS('${escOS(os?.id || '')}')">SALVAR COTACOES</button>
-        <button type="button" class="btn-outline" onclick="window.abrirCotacaoFornecedoresOSLote?.('${escOS(os?.id || '')}','marcadas')">COTAR SELECIONADAS</button>
-        <button type="button" class="btn-success" onclick="window.abrirEntradaNFCotacaoOS('${escOS(os?.id || '')}','${escOS(it.key)}')">DAR ENTRADA NF / VINCULAR</button>
+        <button type="button" class="btn-ghost" onclick="window.adicionarCotacaoOpcaoOS(this)">+ REGISTRAR RETORNO</button>
+        <button type="button" class="btn-primary" onclick="window.salvarCotacoesPecasOS('${escOS(os?.id || '')}')">SALVAR E ANALISAR</button>
+        <button type="button" class="btn-success" onclick="window.abrirEntradaNFCotacaoOS('${escOS(os?.id || '')}','${escOS(it.key)}')">ENTRADA NF / VINCULAR</button>
       </div>
     </div>`;
   }).join('');
@@ -3252,11 +3315,12 @@ window.renderCotacaoPecasAprovadasOS = function(os, aprovados, moedaFn) {
     <div style="font-family:var(--fm);font-size:.72rem;color:var(--success);font-weight:800;letter-spacing:1px;margin-bottom:8px;">COTACAO E COMPRA DAS PECAS APROVADAS</div>
     <div style="font-family:var(--fm);font-size:.60rem;color:var(--muted);margin-bottom:8px;">Fluxo interno. Cotar nao significa comprar; comprado nao significa instalado; instalacao depende da execucao.</div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;align-items:center;position:sticky;top:0;z-index:5;background:var(--surf,#fff);padding:8px;border:1px solid var(--border);border-radius:4px;">
+      <span style="font-family:var(--fm);font-size:.62rem;color:var(--muted);font-weight:800;letter-spacing:.7px;">PEDIDO A FORNECEDORES</span>
       <label style="display:inline-flex;align-items:center;gap:6px;font-family:var(--fm);font-size:.64rem;color:var(--text);font-weight:800;">
-        <input type="checkbox" onchange="window.toggleTodasPecasCotacao?.(this.checked)" style="width:auto;min-height:0;"> SELECIONAR TODAS AS PECAS
+        <input type="checkbox" onchange="window.toggleTodasPecasCotacao?.(this.checked)" style="width:auto;min-height:0;"> selecionar todas
       </label>
-      <button type="button" class="btn-outline" onclick="window.abrirCotacaoFornecedoresOSLote?.('${escOS(os?.id || '')}','marcadas')">COTAR PECAS MARCADAS</button>
-      <button type="button" class="btn-primary" onclick="window.abrirCotacaoFornecedoresOSLote?.('${escOS(os?.id || '')}','todos')">COTAR TODAS AS PECAS</button>
+      <button type="button" class="btn-outline" onclick="window.abrirCotacaoFornecedoresOSLote?.('${escOS(os?.id || '')}','marcadas')">ENVIAR MARCADAS</button>
+      <button type="button" class="btn-primary" onclick="window.abrirCotacaoFornecedoresOSLote?.('${escOS(os?.id || '')}','todos')">ENVIAR TODAS</button>
     </div>
     ${blocos}
   </div>`;
@@ -3270,29 +3334,33 @@ window.coletarCotacoesPecasOS = function() {
     let item = {};
     try { item = JSON.parse(box.querySelector('.cot-item-json')?.value || '{}') || {}; } catch (_) { item = {}; }
     const opcoes = [];
-    box.querySelectorAll('.cot-opcao-row').forEach((row, idx) => {
-      const fornecedorId = row.querySelector('.cot-fornecedor-id')?.value || '';
-      const fornecedorSelect = row.querySelector('.cot-fornecedor-id');
-      const fornecedorOpt = fornecedorId ? (fornecedorSelect?.selectedOptions?.[0]?.textContent || '') : '';
-      const fornecedorLivre = row.querySelector('.cot-fornecedor')?.value?.trim() || '';
-      const valorUnitario = cotacaoValorOS(row.querySelector('.cot-valor')?.value || 0);
-      const prazo = row.querySelector('.cot-prazo')?.value?.trim() || '';
-      const condicao = row.querySelector('.cot-condicao')?.value?.trim() || '';
-      if (!fornecedorId && !fornecedorLivre && !valorUnitario && !prazo && !condicao) return;
+    const opcoesLidas = lerOpcoesCotacaoBox(box);
+    const melhor = melhorCotacaoOS({ opcoes: opcoesLidas });
+    opcoesLidas.forEach((op, idx) => {
       opcoes.push({
-        id: row.dataset.cotId || ('cot-' + Date.now() + '-' + idx),
-        fornecedorId,
-        fornecedor: fornecedorLivre || fornecedorOpt,
-        valorUnitario,
-        prazo,
-        condicao,
-        selecionado: !!row.querySelector('.cot-escolhida')?.checked,
-        comprado: !!row.querySelector('.cot-comprado')?.checked,
-        compradoEm: row.querySelector('.cot-comprado')?.checked ? new Date().toISOString() : '',
+        id: op.id,
+        fornecedorId: op.fornecedorId,
+        fornecedor: op.fornecedor,
+        valorUnitario: op.valorUnitario,
+        prazo: op.prazo,
+        condicao: op.condicao,
+        selecionado: op.selecionado,
+        comprado: op.comprado,
+        compradoEm: op.comprado ? new Date().toISOString() : '',
+        melhorPreco: !!melhor && op.id === melhor.id,
+        origem: 'cotacao_recebida_manual',
+        recebidoEm: new Date().toISOString(),
         updatedAt: new Date().toISOString()
       });
     });
-    out[key] = { key, item, opcoes, updatedAt: new Date().toISOString() };
+    out[key] = { key, item, opcoes, melhorCotacao: melhor ? {
+      id: melhor.id,
+      fornecedorId: melhor.fornecedorId || '',
+      fornecedor: melhor.fornecedor || '',
+      valorUnitario: melhor.valorUnitario || 0,
+      prazo: melhor.prazo || '',
+      condicao: melhor.condicao || ''
+    } : null, updatedAt: new Date().toISOString() };
   });
   return out;
 };
@@ -3312,7 +3380,9 @@ window.salvarCotacoesPecasOS = async function(osId) {
     osAtual.cotacoesPecas = cotacoesPecas;
     osAtual.timeline = timeline;
   }
-  window.toast?.('Cotacoes salvas na O.S.', 'ok');
+  window.atualizarAnaliseCotacoesOS?.();
+  const totalValidas = Object.values(cotacoesPecas).reduce((acc, cot) => acc + ((cot.opcoes || []).filter(o => cotacaoValorOS(o.valorUnitario) > 0).length), 0);
+  window.toast?.(`Cotacoes registradas e analisadas na O.S. (${totalValidas} valor(es) valido(s)).`, 'ok');
   if (typeof window.thiaAudit === 'function') {
     window.thiaAudit('cotacao_pecas_os', 'ordens_servico', osId, null, cotacoesPecas, 'Atualizacao de cotacao de pecas aprovadas').catch(() => {});
   }
@@ -3636,29 +3706,26 @@ function _ciliaBuscarServicoTempa(peca, veiculoAtual) {
   const desc = String(peca?.desc || '').trim();
   const codigo = String(peca?.codigo || '').trim();
   if (!desc && !codigo) return null;
+  const descLimpa = _ciliaLimparDescParaTempa(desc);
   const consultas = _ciliaConsultasTempaPeca(desc, codigo);
+  [
+    `substituir ${descLimpa}`,
+    `troca ${descLimpa}`,
+    `remover e instalar ${descLimpa}`,
+    descLimpa,
+    codigo
+  ].filter(Boolean).forEach(q => { if (!consultas.includes(q)) consultas.push(q); });
   const vistos = new Set();
-  const candidatos = [];
   for (const consulta of consultas) {
-    const resultados = window.tempaBuscarPorTexto(consulta, { veiculo: veiculoAtual, limite: 18 }) || [];
+    const resultados = window.tempaBuscarPorTexto(consulta, { veiculo: veiculoAtual, limite: 12 }) || [];
     for (const item of resultados) {
       const chave = `${item.codigo || ''}|${item.sistema || ''}|${item.operacao || ''}|${item.item || ''}`;
       if (vistos.has(chave)) continue;
       vistos.add(chave);
       if (numBR(item.tempo || 0) <= 0) continue;
-      if (!_ciliaTempaCompativelComVeiculo(item, veiculoAtual)) continue;
-      candidatos.push({ item, score: _ciliaScoreTempaPeca(item, desc, codigo) });
+      return item;
     }
   }
-  if (!candidatos.length) return null;
-  candidatos.sort((a, b) => b.score - a.score || numBR(a.item.tempo) - numBR(b.item.tempo));
-  const top = candidatos[0];
-  const segundo = candidatos[1];
-  // Melhor que "unico candidato": autoaplica quando o primeiro tem forte
-  // aderencia textual e distancia suficiente do segundo. Caso contrario,
-  // continua exigindo escolha manual para nao inventar servico.
-  if (top.score >= 58 && (!segundo || top.score - segundo.score >= 10)) return top.item;
-  if (candidatos.length === 1 && top.score >= 38) return top.item;
   return null;
 }
 

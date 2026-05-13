@@ -582,6 +582,10 @@
             <small style="font-family:var(--fm);color:var(--muted);">${c.wpp ? 'WPP ' + esc(c.wpp) : ''}${c.email ? ' | ' + esc(c.email) : ''}</small>
           </div>
           <textarea class="j-textarea cot-msg-text" rows="7">${esc(m.mensagem)}</textarea>
+          <div style="display:grid;grid-template-columns:minmax(180px,1fr) auto;gap:7px;margin-top:7px;align-items:center;">
+            <input class="j-input cot-link-publico" readonly value="${escAttr(m.fornecedor.link || '')}" style="font-size:.68rem;font-family:var(--fm);" title="Link publico individual para este fornecedor">
+            <button type="button" class="btn-outline" onclick="window.copiarLinkCotacao(${idx})">Copiar link publico</button>
+          </div>
           <div class="cot-msg-actions">
             <button type="button" class="btn-success" onclick="window.abrirCanalCotacao(${idx},'whatsapp')">WhatsApp</button>
             <button type="button" class="btn-outline" onclick="window.abrirCanalCotacao(${idx},'email')">E-mail</button>
@@ -613,6 +617,18 @@
       W.toast?.('Mensagem copiada.', 'ok');
     } catch (_) {
       if (ta) { ta.focus(); ta.select(); D.execCommand('copy'); W.toast?.('Mensagem copiada.', 'ok'); }
+    }
+  };
+
+  W.copiarLinkCotacao = async function (idx) {
+    const input = D.querySelectorAll('#cotRfqMensagens .cot-link-publico')[idx];
+    const link = input ? input.value : state.mensagens[idx]?.fornecedor?.link || '';
+    if (!link) { W.toast?.('Link publico ainda nao foi gerado.', 'warn'); return; }
+    try {
+      await navigator.clipboard.writeText(link);
+      W.toast?.('Link publico copiado.', 'ok');
+    } catch (_) {
+      if (input) { input.focus(); input.select(); D.execCommand('copy'); W.toast?.('Link publico copiado.', 'ok'); }
     }
   };
 
@@ -807,8 +823,6 @@
     W.renderCotacaoPecasAprovadasOS = function (os, aprovados, moedaFn) {
       let html = original.call(this, os, aprovados, moedaFn);
       if (!html || typeof html !== 'string') return html;
-      html = html.replace(/(<button type="button" class="btn-success" onclick="window\.abrirEntradaNFCotacaoOS\('([^']*)','([^']*)'\)">DAR ENTRADA NF \/ VINCULAR<\/button>)/g,
-        `<button type="button" class="btn-outline" onclick="window.abrirCotacaoFornecedoresOS('$2','$3')">ENVIAR COTACAO A FORNECEDORES</button>$1`);
       return html;
     };
     W._cotacoesRenderPatched = true;
