@@ -282,7 +282,7 @@
             </div>
             <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:10px;">
               <button type="button" class="btn-primary" onclick="window.gerarEnvioCotacaoOS()">GERAR MENSAGENS DOS SELECIONADOS</button>
-              <button type="button" class="btn-outline" onclick="window.exportarCotacaoFornecedoresOS()">EXPORTAR COTACAO</button>
+              <button type="button" class="btn-outline" onclick="window.exportarCotacaoFornecedoresOS()">EXPORTAR ANALISE COM RESPOSTAS</button>
               <small id="cotRfqAvisoBase" style="font-family:var(--fm);font-size:.62rem;color:var(--muted);"></small>
             </div>
             <div id="cotRfqMensagens" style="margin-top:12px;"></div>
@@ -757,13 +757,204 @@
     return lines.join('\r\n');
   }
 
+  function osAtualExportacaoCotacao() {
+    const idTela = $('osId')?.value || state.os?.id || state.osId || '';
+    const osTela = (J().os || []).find(o => String(o.id || '') === String(idTela || ''));
+    return osTela || state.os || {};
+  }
+
+  function mergeCotacoesTela(os) {
+    const salvas = cotMap(os);
+    const tela = typeof W.coletarCotacoesPecasOS === 'function' ? (W.coletarCotacoesPecasOS() || {}) : {};
+    const out = Object.assign({}, salvas);
+    Object.keys(tela).forEach(key => {
+      out[key] = Object.assign({}, salvas[key] || {}, tela[key] || {}, {
+        solicitacoes: (salvas[key]?.solicitacoes || tela[key]?.solicitacoes || [])
+      });
+    });
+    return out;
+  }
+
+  function itensParaExportacaoCotacao(os, map) {
+    const keys = new Set(Object.keys(map || {}));
+    D.querySelectorAll('#cotacaoPecasOS .cotacao-peca-box[data-item-key]').forEach(box => keys.add(box.getAttribute('data-item-key')));
+    if (state.itemKeys && state.itemKeys.length) state.itemKeys.forEach(k => keys.add(k));
+    const itens = getItems(os, Array.from(keys));
+    if (itens.length) return itens;
+    if (typeof W.pecasCotacaoDaTelaOS === 'function') return W.pecasCotacaoDaTelaOS() || [];
+    return budgetItems(os).filter(i => i.tipo === 'peca');
+  }
+
+  function valorTotalOpcao(op, item) {
+    const qtd = num(item?.qtd || op?.qtd || 1) || 1;
+    const totalDireto = num(op?.valorTotal);
+    if (totalDireto > 0) return totalDireto;
+    return +(num(op?.valorUnitario) * qtd + num(op?.frete)).toFixed(2);
+  }
+
+  function opcoesValidasExportacao(cot, item) {
+    return (cot?.opcoes || [])
+      .filter(op => num(op?.valorUnitario) > 0 || num(op?.valorTotal) > 0 || op?.fornecedor || op?.fornecedorNome)
+      .map(op => Object.assign({}, op, {
+        valorUnitario: num(op?.valorUnitario),
+        frete: num(op?.frete),
+        valorTotalCalculado: valorTotalOpcao(op, item)
+      }))
+      .sort((a, b) => {
+        const av = a.valorTotalCalculado || 999999999;
+        const bv = b.valorTotalCalculado || 999999999;
+        return av - bv || String(a.fornecedor || a.fornecedorNome || '').localeCompare(String(b.fornecedor || b.fornecedorNome || ''));
+      });
+  }
+
+  function melhorOpcaoExportacao(opcoes) {
+    return opcoes.filter(op => num(op.valorUnitario) > 0 || num(op.valorTotalCalculado) > 0)[0] || null;
+  }
+
+  function escolhidaExportacao(opcoes) {
+    return opcoes.find(op => op.selecionado) || melhorOpcaoExportacao(opcoes);
+  }
+
+  function fmtDataHoraCotacao(v) {
+    if (!v) return '-';
+    try {
+      const d = v && typeof v.toDate === 'function' ? v.toDate() : new Date(v);
+      if (isNaN(d.getTime())) return String(v);
+      return d.toLocaleString('pt-BR');
+    } catch (_) {
+      return String(v);
+    }
+  }
+
+  function fornecedorNomeOpcao(op) {
+    return op?.fornecedor || op?.fornecedorNome || op?.responsavel || 'Fornecedor';
+  }
+
+  function fornecedorKeyCotacao(v) {
+    return norm(String(v || ''));
+  }
+
+  function fornecedoresConsultadosHTML(cot, opcoes) {
+    const respondidos = new Set();
+    opcoes.forEach(op => {
+      if (op.fornecedorId) respondidos.add('id:' + String(op.fornecedorId));
+      respondidos.add('nome:' + fornecedorKeyCotacao(fornecedorNomeOpcao(op)));
+    });
+    const solicitacoes = Array.isArray(cot?.solicitacoes) ? cot.solicitacoes : [];
+    const fornecedores = [];
+    solicitacoes.forEach(sol => {
+      (sol.fornecedores || []).forEach(f => {
+        const k = f.id ? 'id:' + String(f.id) : 'nome:' + fornecedorKeyCotacao(f.nome);
+        if (!fornecedores.some(x => x.key === k)) fornecedores.push({ key: k, item: f, sol });
+      });
+    });
+    if (!fornecedores.length) return '<span class="muted">Sem pedido publico registrado para esta peca.</span>';
+    return '<ul class="consultados">' + fornecedores.map(({ key, item, sol }) => {
+      const ok = respondidos.has(key) || respondidos.has('nome:' + fornecedorKeyCotacao(item.nome));
+      return `<li><strong>${esc(item.nome || 'Fornecedor')}</strong> <span class="${ok ? 'ok' : 'pend'}">${ok ? 'respondido' : 'sem resposta'}</span><br><small>${item.wpp ? 'WPP ' + esc(item.wpp) + ' | ' : ''}${item.email ? 'Email ' + esc(item.email) + ' | ' : ''}solicitado em ${fmtDataHoraCotacao(sol.createdAt)}</small></li>`;
+    }).join('') + '</ul>';
+  }
+
+  function montarHTMLAnaliseCotacao() {
+    const os = osAtualExportacaoCotacao();
+    const map = mergeCotacoesTela(os);
+    const itens = itensParaExportacaoCotacao(os, map);
+    const v = veiculoOS(os);
+    const emitido = new Date();
+    let totalOrcado = 0;
+    let totalMelhor = 0;
+    let totalEscolhido = 0;
+    let totalComprado = 0;
+    const linhasItens = itens.map((item, idx) => {
+      const cot = map[item.key] || {};
+      const opcoes = opcoesValidasExportacao(cot, item);
+      const melhor = melhorOpcaoExportacao(opcoes);
+      const escolhida = escolhidaExportacao(opcoes);
+      const qtd = num(item.qtd || 1) || 1;
+      const orcado = num(item.valorFinal || item.valorOrcado || item.valorAprovado || item.valorUnit || 0);
+      const melhorTotal = melhor ? melhor.valorTotalCalculado : 0;
+      const escolhidaTotal = escolhida ? escolhida.valorTotalCalculado : 0;
+      totalOrcado += orcado;
+      totalMelhor += melhorTotal;
+      totalEscolhido += escolhidaTotal;
+      if (escolhida?.comprado || opcoes.some(op => op.comprado)) totalComprado += escolhidaTotal || melhorTotal;
+      const status = opcoes.length ? (escolhida?.comprado ? 'comprado' : escolhida?.selecionado ? 'escolhido' : 'analisar') : 'aguardando';
+      const rows = opcoes.length ? opcoes.map((op, opIdx) => {
+        const isBest = melhor && op.id === melhor.id;
+        const isEscolhida = escolhida && op.id === escolhida.id && op.selecionado;
+        return `<tr class="${isBest ? 'best' : ''} ${isEscolhida ? 'chosen' : ''}">
+          <td>${opIdx + 1}</td>
+          <td><strong>${esc(fornecedorNomeOpcao(op))}</strong>${op.origem ? `<br><small>${esc(op.origem)}</small>` : ''}</td>
+          <td>${esc(op.marca || '-')}</td>
+          <td class="num">${moeda(op.valorUnitario)}</td>
+          <td class="num">${op.frete ? moeda(op.frete) : '-'}</td>
+          <td class="num"><strong>${moeda(op.valorTotalCalculado)}</strong></td>
+          <td>${esc(op.prazo || '-')}</td>
+          <td>${esc(op.condicao || op.observacao || '-')}</td>
+          <td>${isBest ? '<span class="tag ok">menor</span>' : ''}${op.selecionado ? '<span class="tag info">comprar</span>' : ''}${op.comprado ? '<span class="tag bought">comprado</span>' : ''}</td>
+        </tr>`;
+      }).join('') : '<tr><td colspan="9" class="empty">Nenhuma resposta registrada para esta peca.</td></tr>';
+      const economia = orcado && melhorTotal ? orcado - melhorTotal : 0;
+      return `<section class="item">
+        <div class="item-head">
+          <div>
+            <h2>${idx + 1}. ${esc(itemTitulo(item))}</h2>
+            <p>Qtd ${esc(qtd)} | Valor orcado/aprovado: <strong>${moeda(orcado)}</strong>${economia ? ` | Diferença vs menor: <strong class="${economia >= 0 ? 'ok' : 'danger'}">${moeda(economia)}</strong>` : ''}</p>
+          </div>
+          <span class="status ${status}">${status}</span>
+        </div>
+        <div class="rec">
+          <strong>Recomendacao:</strong> ${melhor ? `menor resposta em <strong>${esc(fornecedorNomeOpcao(melhor))}</strong>, ${moeda(melhor.valorTotalCalculado)} total (${moeda(melhor.valorUnitario)} un.)${melhor.prazo ? ', prazo ' + esc(melhor.prazo) : ''}.` : 'aguardar retorno dos fornecedores ou registrar cotacao manual.'}
+        </div>
+        <table>
+          <thead><tr><th>#</th><th>Fornecedor</th><th>Marca</th><th>Unit.</th><th>Frete</th><th>Total</th><th>Prazo</th><th>Condicao/obs.</th><th>Status</th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+        <div class="consultados-wrap"><strong>Fornecedores consultados:</strong>${fornecedoresConsultadosHTML(cot, opcoes)}</div>
+      </section>`;
+    }).join('');
+    const economiaTotal = totalOrcado && totalMelhor ? totalOrcado - totalMelhor : 0;
+    return `<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Analise de cotacao ${esc(osRefLabel(os))}</title>
+<style>
+body{font-family:Arial,Helvetica,sans-serif;margin:0;background:#f3f5f8;color:#152033;} .page{max-width:1120px;margin:0 auto;background:#fff;min-height:100vh;padding:28px;} header{border-bottom:3px solid #0f766e;padding-bottom:16px;margin-bottom:18px;display:flex;justify-content:space-between;gap:18px;} h1{margin:0;font-size:22px;letter-spacing:.04em;} .muted,small{color:#64748b;} .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:16px 0;} .kpi{border:1px solid #d7dee8;border-radius:6px;padding:12px;background:#f8fafc;} .kpi b{display:block;font-size:17px;margin-top:4px;} .item{page-break-inside:avoid;border:1px solid #d7dee8;border-radius:6px;margin:18px 0;overflow:hidden;} .item-head{display:flex;justify-content:space-between;gap:12px;padding:14px;background:#eef6f5;border-bottom:1px solid #d7dee8;} .item h2{font-size:16px;margin:0 0 5px;} .item p{margin:0;font-size:12px;color:#475569;} .status,.tag{display:inline-flex;align-items:center;border-radius:999px;padding:4px 8px;font-size:10px;font-weight:700;text-transform:uppercase;margin:2px;} .status{height:fit-content;background:#e2e8f0;color:#334155;} .status.comprado,.tag.bought{background:#dcfce7;color:#166534;} .status.escolhido,.tag.info{background:#dbeafe;color:#1d4ed8;} .status.analisar,.tag.ok{background:#ccfbf1;color:#0f766e;} .status.aguardando{background:#fee2e2;color:#991b1b;} .rec{padding:10px 14px;background:#fff7ed;border-bottom:1px solid #fed7aa;font-size:12px;} table{width:100%;border-collapse:collapse;font-size:11px;} th,td{border-bottom:1px solid #e2e8f0;padding:8px;text-align:left;vertical-align:top;} th{background:#f8fafc;color:#334155;text-transform:uppercase;font-size:10px;} tr.best td{background:#ecfdf5;} tr.chosen td{outline:2px solid #60a5fa;outline-offset:-2px;} .num{text-align:right;white-space:nowrap;} .ok{color:#15803d;} .danger{color:#b91c1c;} .empty{text-align:center;color:#64748b;padding:16px;} .consultados-wrap{padding:10px 14px;background:#fafafa;font-size:11px;} .consultados{margin:6px 0 0;padding-left:18px;} .consultados li{margin:4px 0;} .pend{color:#b45309;font-weight:700;} footer{border-top:1px solid #d7dee8;margin-top:24px;padding-top:10px;font-size:10px;color:#64748b;display:flex;justify-content:space-between;gap:12px;} @media print{body{background:#fff}.page{padding:12mm;max-width:none}.item{break-inside:avoid}.no-print{display:none}}
+</style>
+</head>
+<body>
+<div class="page">
+<header>
+  <div><h1>ANALISE DE COTACAO DE PECAS</h1><div class="muted">${esc(osRefLabel(os))} | emitido em ${emitido.toLocaleString('pt-BR')}</div></div>
+  <div style="text-align:right"><strong>${esc(J().oficina?.nomeFantasia || J().tnome || 'Oficina')}</strong><br><span class="muted">Oficin_IA</span></div>
+</header>
+<section>
+  <strong>Veiculo:</strong> ${esc([v.prefixo ? 'Prefixo ' + v.prefixo : '', v.placa ? 'Placa ' + v.placa : '', v.nome || '', v.ano || '', v.chassi ? 'Chassi ' + v.chassi : ''].filter(Boolean).join(' | ') || '-')}
+</section>
+<div class="grid">
+  <div class="kpi">Itens cotados<b>${itens.length}</b></div>
+  <div class="kpi">Total orcado<b>${moeda(totalOrcado)}</b></div>
+  <div class="kpi">Menores respostas<b>${moeda(totalMelhor)}</b></div>
+  <div class="kpi">Economia potencial<b class="${economiaTotal >= 0 ? 'ok' : 'danger'}">${moeda(economiaTotal)}</b></div>
+  <div class="kpi">Total escolhido<b>${moeda(totalEscolhido)}</b></div>
+  <div class="kpi">Ja comprado<b>${moeda(totalComprado)}</b></div>
+</div>
+${linhasItens || '<section class="item"><div class="empty">Nenhuma peca de cotacao encontrada nesta O.S.</div></section>'}
+<footer><span>Orcamento/laudo comercial gerado pelo sistema Oficin_IA</span><strong>Powered by thIAguinho Solu\u00e7\u00f5es Digitais</strong></footer>
+</div>
+</body>
+</html>`;
+  }
+
   W.exportarCotacaoFornecedoresOS = async function () {
-    const texto = linhasExportCotacao();
-    const nome = 'cotacao-' + String(state.os?.id || 'os').slice(-6).toUpperCase() + '-' + new Date().toISOString().slice(0, 10) + '.txt';
-    const blob = new Blob([texto], { type: 'text/plain;charset=utf-8' });
+    const os = osAtualExportacaoCotacao();
+    const html = montarHTMLAnaliseCotacao();
+    const nome = 'analise-cotacao-' + String(os?.numero || os?.id || state.os?.id || 'os').slice(-6).toUpperCase() + '-' + new Date().toISOString().slice(0, 10) + '.html';
+    const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
     try {
       if (typeof W.salvarBlobArquivoOS === 'function') {
-        await W.salvarBlobArquivoOS(blob, nome, 'text/plain');
+        await W.salvarBlobArquivoOS(blob, nome, 'text/html');
       } else {
         const url = URL.createObjectURL(blob);
         const a = D.createElement('a');
@@ -774,10 +965,10 @@
         a.remove();
         setTimeout(() => URL.revokeObjectURL(url), 1000);
       }
-      W.toast?.('Cotacao exportada.', 'ok');
+      W.toast?.('Analise de cotacao exportada com respostas dos fornecedores.', 'ok');
     } catch (err) {
       console.warn(err);
-      W.toast?.('Nao foi possivel exportar a cotacao.', 'warn');
+      W.toast?.('Nao foi possivel exportar a analise de cotacao.', 'warn');
     }
   };
 

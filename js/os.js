@@ -2689,6 +2689,7 @@ window.gerarPDFOS = async function() {
   const pw = doc.internal.pageSize.getWidth();
   const ph = doc.internal.pageSize.getHeight();
   const margem = 12;
+  const larguraUtilPdf = pw - margem * 2;
   let y = 12;
 
   const U = OSU();
@@ -2968,9 +2969,10 @@ window.gerarPDFOS = async function() {
       body: resumoSecoesRows,
       theme: 'grid',
       margin: { left: margem, right: margem },
+      tableWidth: larguraUtilPdf,
       styles: { fontSize: 6.8, cellPadding: 1.45, lineColor: [190, 198, 210], lineWidth: 0.12, overflow: 'linebreak' },
       headStyles: { fillColor: [28, 39, 58], textColor: [255, 255, 255] },
-      columnStyles: { 0: { cellWidth: 40 }, 1: { cellWidth: 32 }, 2: { cellWidth: 62 }, 3: { halign: 'center', cellWidth: 16 }, 4: { halign: 'right', cellWidth: 22 } }
+      columnStyles: { 0: { cellWidth: 42 }, 1: { cellWidth: 34 }, 2: { cellWidth: 66 }, 3: { halign: 'center', cellWidth: 16 }, 4: { halign: 'right', cellWidth: 28 } }
     });
     y = doc.lastAutoTable.finalY + 6;
   }
@@ -2991,9 +2993,10 @@ window.gerarPDFOS = async function() {
       ]),
       theme: 'grid',
       margin: { left: margem, right: margem },
+      tableWidth: larguraUtilPdf,
       styles: { fontSize: 6.7, cellPadding: 1.45, lineColor: [190, 198, 210], lineWidth: 0.12, overflow: 'linebreak' },
       headStyles: { fillColor: [28, 39, 58], textColor: [255, 255, 255] },
-      columnStyles: { 0: { cellWidth: 20 }, 1: { cellWidth: 48 }, 2: { cellWidth: 57 }, 3: { halign: 'center', cellWidth: 13 }, 4: { halign: 'right', cellWidth: 19 }, 5: { halign: 'center', cellWidth: 15 }, 6: { halign: 'right', cellWidth: 20 } }
+      columnStyles: { 0: { cellWidth: 16 }, 1: { cellWidth: 44 }, 2: { cellWidth: 62 }, 3: { halign: 'center', cellWidth: 12 }, 4: { halign: 'right', cellWidth: 18 }, 5: { halign: 'center', cellWidth: 14 }, 6: { halign: 'right', cellWidth: 20 } }
     });
     y = doc.lastAutoTable.finalY + 6;
   }
@@ -3008,9 +3011,10 @@ window.gerarPDFOS = async function() {
       body: pecas,
       theme: 'grid',
       margin: { left: margem, right: margem },
-      styles: { fontSize: 7.3, cellPadding: 1.6, lineColor: [190, 198, 210], lineWidth: 0.12 },
+      tableWidth: larguraUtilPdf,
+      styles: { fontSize: 7.2, cellPadding: 1.55, lineColor: [190, 198, 210], lineWidth: 0.12, overflow: 'linebreak' },
       headStyles: { fillColor: [28, 39, 58], textColor: [255, 255, 255] },
-      columnStyles: { 0: { cellWidth: 32 }, 1: { cellWidth: 70 }, 2: { halign: 'center', cellWidth: 12 }, 3: { halign: 'right', cellWidth: 24 }, 4: { halign: 'center', cellWidth: 16 }, 5: { halign: 'right', cellWidth: 26 } }
+      columnStyles: { 0: { cellWidth: 32 }, 1: { cellWidth: 76 }, 2: { halign: 'center', cellWidth: 12 }, 3: { halign: 'right', cellWidth: 24 }, 4: { halign: 'center', cellWidth: 16 }, 5: { halign: 'right', cellWidth: 26 } }
     });
     y = doc.lastAutoTable.finalY + 6;
   }
@@ -3033,9 +3037,10 @@ window.gerarPDFOS = async function() {
       ]],
       theme: 'grid',
       margin: { left: margem, right: margem },
+      tableWidth: larguraUtilPdf,
       styles: { fontSize: 6.6, cellPadding: 1.35, lineColor: [190, 198, 210], lineWidth: 0.12, overflow: 'linebreak' },
       headStyles: { fillColor: [28, 39, 58], textColor: [255, 255, 255] },
-      columnStyles: { 0: { cellWidth: 45 }, 1: { halign:'center' }, 2: { halign:'center' }, 3: { halign:'center' }, 4: { halign:'right' }, 5: { halign:'right' }, 6: { halign:'center' }, 7: { halign:'right' } }
+      columnStyles: { 0: { cellWidth: 34 }, 1: { halign:'center', cellWidth: 22 }, 2: { halign:'center', cellWidth: 22 }, 3: { halign:'center', cellWidth: 22 }, 4: { halign:'right', cellWidth: 23 }, 5: { halign:'right', cellWidth: 25 }, 6: { halign:'center', cellWidth: 18 }, 7: { halign:'right', cellWidth: 20 } }
     });
     y = doc.lastAutoTable.finalY + 6;
     if (guinchoPdf.obs) blocoTexto('OBSERVACAO DO DESLOCAMENTO', guinchoPdf.obs);
@@ -3058,10 +3063,11 @@ window.gerarPDFOS = async function() {
 
   if (y > ph - 34) { doc.addPage(); y = 12; }
   const totalGeral = +(totalServicos + totalPecas + totalGuinchoPdf).toFixed(2);
-  doc.autoTable({
-    startY: y,
-    theme: 'plain',
-    margin: { left: pw - 95, right: margem },
+    doc.autoTable({
+      startY: y,
+      theme: 'plain',
+    margin: { left: pw - margem - 88, right: margem },
+    tableWidth: 88,
     styles: { fontSize: 9, cellPadding: 1.8 },
     body: [
       ['TOTAL DE PECAS', moedaPdf(totalPecas)],
@@ -3069,7 +3075,7 @@ window.gerarPDFOS = async function() {
       ['DESLOCAMENTO / GUINCHO', moedaPdf(totalGuinchoPdf)],
       [aprovacaoPDFAtiva ? 'VALOR APROVADO / CONTRATO' : 'VALOR DO CONTRATO', moedaPdf(totalGeral)]
     ],
-    columnStyles: { 0: { fontStyle: 'bold', halign: 'right' }, 1: { fontStyle: 'bold', halign: 'right' } },
+    columnStyles: { 0: { fontStyle: 'bold', halign: 'right', cellWidth: 56 }, 1: { fontStyle: 'bold', halign: 'right', cellWidth: 32 } },
     didParseCell: data => {
       if (data.row.index === 3) {
         data.cell.styles.fillColor = [205, 200, 160];
@@ -3109,29 +3115,43 @@ window.gerarPDFOS = async function() {
     if (count % 3 !== 0) y += thumbH + 8;
   }
 
-  if (y > ph - 44) { doc.addPage(); y = ph - 44; }
-  y = Math.max(y, ph - 44);
   const assinaturaPDF = (typeof window._osSignGetPayload === 'function' ? window._osSignGetPayload() : null) || osAtual.assinaturaResponsavel || osAtual.assinaturaOS || osAtual.assinaturaUsada || J.oficina?.assinatura || {};
   const urlAssPDF = assinaturaPDF.url || assinaturaPDF.cloudUrl || assinaturaPDF.assinaturaUrl || assinaturaPDF.urlAssinatura || '';
   const imgAssPDF = await carregarImagem(urlAssPDF);
+  const alturaFechamentoPDF = 55;
+  if (y + alturaFechamentoPDF > ph - 10) { doc.addPage(); y = 18; }
+  const assinaturaLinhaY = y + 24;
   doc.setDrawColor(70, 80, 95);
   if (imgAssPDF) {
     const maxW = 70, maxH = 22;
     const ratio = Math.min(maxW / imgAssPDF.w, maxH / imgAssPDF.h);
     const w = imgAssPDF.w * ratio, h = imgAssPDF.h * ratio;
-    doc.addImage(imgAssPDF.data, 'JPEG', margem + (70 - w) / 2, y - h - 2, w, h);
+    doc.addImage(imgAssPDF.data, 'JPEG', margem + (70 - w) / 2, assinaturaLinhaY - h - 2, w, h);
   } else {
-    doc.line(margem, y, margem + 70, y);
+    doc.line(margem, assinaturaLinhaY, margem + 70, assinaturaLinhaY);
   }
-  doc.line(pw - margem - 70, y, pw - margem, y);
+  doc.line(pw - margem - 70, assinaturaLinhaY, pw - margem, assinaturaLinhaY);
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(7);
   doc.setTextColor(30, 40, 55);
-  doc.text(texto(assinaturaPDF.nomeResponsavel || assinaturaPDF.nome || oficinaNomePdf), margem + 35, y + 5, { align: 'center' });
-  doc.text(texto(assinaturaPDF.cargo || assinaturaPDF.funcao || 'RESPONSAVEL TECNICO'), margem + 35, y + 9, { align: 'center' });
-  if (assinaturaPDF.documento || assinaturaPDF.cpf || assinaturaPDF.cnpj) doc.text('Doc.: ' + texto(assinaturaPDF.documento || assinaturaPDF.cpf || assinaturaPDF.cnpj), margem + 35, y + 13, { align: 'center' });
-  doc.text(texto(clientePdf.nome || 'CLIENTE'), pw - margem - 35, y + 5, { align: 'center' });
-  doc.text('ASSINATURA DO CLIENTE', pw - margem - 35, y + 9, { align: 'center' });
+  doc.text(texto(assinaturaPDF.nomeResponsavel || assinaturaPDF.nome || oficinaNomePdf), margem + 35, assinaturaLinhaY + 5, { align: 'center' });
+  doc.text(texto(assinaturaPDF.cargo || assinaturaPDF.funcao || 'RESPONSAVEL TECNICO'), margem + 35, assinaturaLinhaY + 9, { align: 'center' });
+  if (assinaturaPDF.documento || assinaturaPDF.cpf || assinaturaPDF.cnpj) doc.text('Doc.: ' + texto(assinaturaPDF.documento || assinaturaPDF.cpf || assinaturaPDF.cnpj), margem + 35, assinaturaLinhaY + 13, { align: 'center' });
+  doc.text(texto(clientePdf.nome || 'CLIENTE'), pw - margem - 35, assinaturaLinhaY + 5, { align: 'center' });
+  doc.text('ASSINATURA DO CLIENTE', pw - margem - 35, assinaturaLinhaY + 9, { align: 'center' });
+
+  const emitidoEmPDF = new Date();
+  const rodapeFechamentoY = assinaturaLinhaY + 20;
+  doc.setDrawColor(210, 216, 226);
+  doc.line(margem, rodapeFechamentoY, pw - margem, rodapeFechamentoY);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(6.8);
+  doc.setTextColor(90, 100, 115);
+  const dataHoraEmissaoPDF = `${emitidoEmPDF.toLocaleDateString('pt-BR')} ${emitidoEmPDF.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
+  doc.text(`Emitido em ${dataHoraEmissaoPDF} | O.S. ${osId}`, margem, rodapeFechamentoY + 5);
+  doc.text('Orcamento/laudo gerado pelo sistema Oficin_IA', margem, rodapeFechamentoY + 9);
+  doc.setFont('helvetica', 'bold');
+  doc.text('Powered by thIAguinho Solu\u00e7\u00f5es Digitais', pw - margem, rodapeFechamentoY + 9, { align: 'right' });
 
   const nomeArquivoPdf = `Laudo_${veiculoPdf.placa || 'OS'}_${Date.now()}.pdf`;
   const pdfBlob = doc.output('blob');
@@ -3515,7 +3535,7 @@ window.renderCotacaoPecasAprovadasOS = function(os, aprovados, moedaFn) {
       </label>
       <button type="button" class="btn-outline" onclick="window.abrirCotacaoFornecedoresOSLote?.('${osIdSeguro}','marcadas')">ENVIAR MARCADAS</button>
       <button type="button" class="btn-primary" onclick="window.abrirCotacaoFornecedoresOSLote?.('${osIdSeguro}','todos')">ENVIAR TODAS</button>
-      <button type="button" class="btn-ghost" onclick="window.exportarCotacaoFornecedoresOS?.()">EXPORTAR COTACAO</button>
+      <button type="button" class="btn-ghost" onclick="window.exportarCotacaoFornecedoresOS?.()">EXPORTAR ANALISE COM RESPOSTAS</button>
     </div>
     ${blocos}
   </div>`;
