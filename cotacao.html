@@ -7,11 +7,11 @@
   <meta name="theme-color" content="#0b1220">
   <style>
     :root{
-      --bg:#0b1220;--panel:#111a2e;--panel2:#17233d;--text:#eef4ff;--muted:#93a4bc;
-      --line:rgba(255,255,255,.12);--ok:#31d084;--warn:#f4c542;--danger:#ff5a6f;--brand:#45b7ff;
+      --bg:#101722;--panel:#172233;--panel2:#213047;--text:#edf3f8;--muted:#a7b4c2;
+      --line:rgba(210,222,232,.16);--ok:#6dbb8d;--warn:#d8ad5f;--danger:#df6f7b;--brand:#7fb7d6;
       --font:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;--mono:"JetBrains Mono",Consolas,monospace;
     }
-    *{box-sizing:border-box}body{margin:0;background:linear-gradient(180deg,#09111f,#101a2d);color:var(--text);font-family:var(--font);min-height:100vh}
+    *{box-sizing:border-box}body{margin:0;background:linear-gradient(180deg,#101722,#141f2e);color:var(--text);font-family:var(--font);min-height:100vh}
     .wrap{width:min(980px,100%);margin:0 auto;padding:18px}
     header{padding:18px 0 12px;border-bottom:1px solid var(--line);margin-bottom:16px}
     .brand{font-family:var(--mono);font-size:.72rem;color:var(--brand);font-weight:800;letter-spacing:1px;text-transform:uppercase}
@@ -20,7 +20,7 @@
     .card{background:rgba(17,26,46,.94);border:1px solid var(--line);border-radius:8px;padding:16px;margin-bottom:14px;box-shadow:0 16px 42px rgba(0,0,0,.28)}
     .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}
     label{display:block;font-family:var(--mono);font-size:.68rem;color:var(--muted);font-weight:800;text-transform:uppercase;letter-spacing:.7px;margin:0 0 5px}
-    input,select,textarea{width:100%;background:#07101d;border:1px solid var(--line);border-radius:5px;color:var(--text);padding:11px;font:inherit;min-height:44px}
+    input,select,textarea{width:100%;background:#111b29;border:1px solid var(--line);border-radius:5px;color:var(--text);padding:11px;font:inherit;min-height:44px}
     textarea{resize:vertical;min-height:86px}
     input::placeholder,textarea::placeholder{color:#6f8199}
     .info{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:8px;margin-top:12px}
@@ -65,6 +65,10 @@
       <div class="info">
         <div><span>Quantidade</span><b id="pecaQtd">1</b></div>
         <div><span>Veiculo</span><b id="veiculoInfo">-</b></div>
+        <div><span>Placa / Prefixo</span><b id="veiculoPlacaPrefixo">-</b></div>
+        <div><span>Ano / Cor</span><b id="veiculoAnoCor">-</b></div>
+        <div><span>Chassi</span><b id="veiculoChassi">-</b></div>
+        <div><span>Tipo / KM</span><b id="veiculoTipoKm">-</b></div>
         <div><span>Prioridade</span><b id="prioridadeInfo">Normal</b></div>
         <div><span>Validade</span><b id="validadeInfo">-</b></div>
       </div>
@@ -90,13 +94,14 @@
         <div style="margin-top:10px;"><label>Observacao</label><textarea id="observacao" placeholder="Detalhes da peca, garantia, substituicao, prazo real..."></textarea></div>
         <div class="actions">
           <button id="btnEnviar" type="submit">ENVIAR COTACAO</button>
+          <button class="secondary" type="button" onclick="window.print()">EXPORTAR / IMPRIMIR</button>
           <button class="secondary" type="button" onclick="window.location.reload()">RECARREGAR</button>
         </div>
         <div id="statusMsg" class="status"></div>
       </form>
     </section>
 
-    <footer>Link individual e auditavel. Nao compartilhe com terceiros.</footer>
+    <footer>Link individual e auditavel. Nao compartilhe com terceiros.<br>Powered by thIAguinho Solu&ccedil;&otilde;es Digitais</footer>
   </main>
 
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>

@@ -155,15 +155,36 @@
   function itensTitulo(items) {
     const lista = Array.isArray(items) && items.length ? items : (state.item ? [state.item] : []);
     if (lista.length === 1) return itemTitulo(lista[0]);
-    return lista.length + ' pecas aprovadas';
+    return lista.length + ' pecas selecionadas';
   }
   function veiculoOS(os) {
+    const snap = os?.veiculoSnapshot || {};
     const v = (J().veiculos || []).find(x => x.id === os?.veiculoId) || {};
+    const placa = String(os?.placa || snap.placa || v.placa || '').toUpperCase();
+    const prefixo = os?.prefixo || os?.prefixoVeiculo || snap.prefixo || snap.prefixoVeiculo || v.prefixo || v.frota || '';
+    const marca = snap.marca || v.marca || os?.marca || '';
+    const modelo = snap.modelo || v.modelo || os?.modelo || os?.veiculo || '';
+    const ano = snap.ano || v.ano || os?.ano || '';
+    const chassi = snap.chassi || snap.chassis || v.chassi || v.chassis || os?.chassi || os?.chassis || '';
+    const cor = snap.cor || v.cor || os?.cor || '';
+    const km = os?.km || snap.km || v.km || '';
+    const tipo = os?.tipoVeiculoOS || os?.tipoVeiculo || snap.tipoVeiculo || snap.tipo || v.tipoVeiculo || v.tipo || '';
     return {
-      placa: String(os?.placa || v.placa || '').toUpperCase(),
-      prefixo: os?.prefixo || os?.prefixoVeiculo || v.prefixo || v.frota || '',
-      nome: [v.marca, v.modelo || os?.veiculo].filter(Boolean).join(' ') || os?.veiculo || 'Veiculo',
-      tipo: os?.tipoVeiculo || v.tipo || ''
+      placa,
+      prefixo,
+      marca,
+      modelo,
+      ano,
+      chassi,
+      chassis: chassi,
+      cor,
+      km,
+      tipo,
+      combustivel: snap.combustivel || v.combustivel || os?.combustivel || '',
+      motor: snap.motor || v.motor || os?.motor || '',
+      renavam: snap.renavam || v.renavam || os?.renavam || '',
+      frota: snap.frota || v.frota || prefixo || '',
+      nome: [marca, modelo].filter(Boolean).join(' ') || os?.veiculo || 'Veiculo'
     };
   }
   function fornecedorContato(f) {
@@ -207,9 +228,9 @@
     try { return /^https?:$/i.test(W.location?.protocol || ''); } catch (_) { return false; }
   }
   function publicUrl(token) {
-    const params = { tenant: J().tid || '', token };
+    const params = { t: J().tid || '', token };
     const cfgParam = encodeFirebaseConfigParam(publicFirebaseConfig());
-    if (cfgParam) params.fcfg = cfgParam;
+    if ((W.THIA_PUBLIC_LINKS || {}).incluirFirebaseConfigNoLink === true && cfgParam) params.fcfg = cfgParam;
     if (typeof W.thiaGetPublicUrl === 'function') {
       return W.thiaGetPublicUrl('cotacaoFornecedor', params);
     }
@@ -261,6 +282,7 @@
             </div>
             <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:10px;">
               <button type="button" class="btn-primary" onclick="window.gerarEnvioCotacaoOS()">GERAR MENSAGENS DOS SELECIONADOS</button>
+              <button type="button" class="btn-outline" onclick="window.exportarCotacaoFornecedoresOS()">EXPORTAR COTACAO</button>
               <small id="cotRfqAvisoBase" style="font-family:var(--fm);font-size:.62rem;color:var(--muted);"></small>
             </div>
             <div id="cotRfqMensagens" style="margin-top:12px;"></div>
@@ -287,12 +309,12 @@
     $('cotRfqResumo').innerHTML = `
       <div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;">
         <div>
-          <div style="font-family:var(--fm);font-size:.62rem;color:var(--success);font-weight:800;letter-spacing:1px;">${items.length > 1 ? 'PECAS APROVADAS PARA COTACAO' : 'PECA APROVADA PARA COTACAO'}</div>
+          <div style="font-family:var(--fm);font-size:.62rem;color:var(--success);font-weight:800;letter-spacing:1px;">${items.length > 1 ? 'PECAS DA O.S. PARA COTACAO' : 'PECA DA O.S. PARA COTACAO'}</div>
           <div style="font-size:.88rem;color:var(--text);font-weight:800;">${esc(itensTitulo(items))}</div>
-          <small style="font-family:var(--fm);font-size:.62rem;color:var(--muted);">aprovado na ${esc(osRefLabel(os))}</small>
+          <small style="font-family:var(--fm);font-size:.62rem;color:var(--muted);">cotacao aberta na ${esc(osRefLabel(os))}</small>
         </div>
         <div style="font-family:var(--fm);font-size:.66rem;color:var(--cyan);text-align:right;">
-          ${v.prefixo ? 'Prefixo ' + esc(v.prefixo) + '<br>' : ''}${v.placa ? 'Placa ' + esc(v.placa) + '<br>' : ''}${esc(v.nome)}${cliente.nome ? '<br>Cliente: ' + esc(cliente.nome) : ''}
+          ${v.prefixo ? 'Prefixo ' + esc(v.prefixo) + '<br>' : ''}${v.placa ? 'Placa ' + esc(v.placa) + '<br>' : ''}${esc(v.nome)}${v.ano ? '<br>Ano: ' + esc(v.ano) : ''}${v.chassi ? '<br>Chassi: ' + esc(v.chassi) : ''}${cliente.nome ? '<br>Cliente: ' + esc(cliente.nome) : ''}
         </div>
       </div>
       <div style="margin-top:8px;">${listaItens}</div>`;
@@ -330,7 +352,7 @@
     if (!os) { W.toast?.('Salve ou reabra a O.S. antes de enviar cotacao.', 'warn'); return; }
     const keys = (Array.isArray(itemKeys) ? itemKeys : [itemKeys]).map(k => String(k || '').trim()).filter(Boolean);
     const items = getItems(os, keys);
-    if (!items.length) { W.toast?.('Selecione pelo menos uma peca aprovada para cotacao.', 'warn'); return; }
+    if (!items.length) { W.toast?.('Selecione pelo menos uma peca da O.S. para cotacao.', 'warn'); return; }
     state.osId = osId;
     state.itemKey = keys[0] || '';
     state.itemKeys = keys;
@@ -368,7 +390,7 @@
     root.querySelectorAll('input[type="checkbox"]').forEach(cb => {
       if (String(cb.getAttribute('onchange') || '').includes('toggleTodasPecasCotacao')) cb.checked = !!checked;
     });
-    W.toast?.(checked ? 'Todas as pecas aprovadas foram marcadas para cotacao.' : 'Selecao de pecas limpa.', checked ? 'ok' : 'warn');
+    W.toast?.(checked ? 'Todas as pecas da O.S. foram marcadas para cotacao.' : 'Selecao de pecas limpa.', checked ? 'ok' : 'warn');
   };
 
   W.abrirCotacaoFornecedoresOSLote = function (osId, modo) {
@@ -383,7 +405,7 @@
         .map(box => box.getAttribute('data-item-key'))
         .filter(Boolean);
     }
-    if (!keys.length) { W.toast?.('Marque uma ou mais pecas aprovadas para cotar.', 'warn'); return; }
+    if (!keys.length) { W.toast?.('Marque uma ou mais pecas da O.S. para cotar.', 'warn'); return; }
     abrirCotacaoFornecedoresComItens(osId, keys);
   };
 
@@ -421,7 +443,7 @@
     const lines = [
       'Olá, ' + (f.nome || f.razao || 'fornecedor') + '.',
       '',
-      'Solicito cotação para peça aprovada em O.S.:',
+      'Solicito cotacao para peca de O.S.:',
       'Peça: ' + (item.codigo ? '[' + item.codigo + '] ' : '') + (item.desc || item.descricao || '-'),
       'Qtd: ' + (item.qtd || 1),
       'Veículo: ' + [v.prefixo ? 'prefixo ' + v.prefixo : '', v.placa ? 'placa ' + v.placa : '', v.nome].filter(Boolean).join(' / '),
@@ -447,9 +469,9 @@
     const lines = [
       'Ola, ' + (f.nome || f.razao || 'fornecedor') + '.',
       '',
-      'Solicito cotacao para ' + (items.length > 1 ? 'pecas aprovadas' : 'peca aprovada') + ' em O.S.:',
+      'Solicito cotacao para ' + (items.length > 1 ? 'pecas da O.S.' : 'peca da O.S.') + ':',
       ...items.map((item, idx) => (idx + 1) + '. ' + itemTitulo(item) + ' | Qtd: ' + (item.qtd || 1)),
-      'Veiculo: ' + [v.prefixo ? 'prefixo ' + v.prefixo : '', v.placa ? 'placa ' + v.placa : '', v.nome].filter(Boolean).join(' / '),
+      'Veiculo: ' + [v.prefixo ? 'prefixo ' + v.prefixo : '', v.placa ? 'placa ' + v.placa : '', v.nome, v.ano ? 'ano ' + v.ano : '', v.chassi ? 'chassi ' + v.chassi : '', v.cor ? 'cor ' + v.cor : '', v.km ? 'km ' + v.km : ''].filter(Boolean).join(' / '),
       osRefLabel(os),
       'Prioridade: ' + prioridade,
       '',
@@ -497,7 +519,8 @@
       desc: it.desc || it.descricao || '',
       qtd: num(it.qtd || 1),
       tipo: it.tipo || 'peca',
-      valorAprovado: num(it.valorFinal || it.valorUnit || 0)
+      valorAprovado: num(it.valorFinal || it.valorUnit || 0),
+      valorOrcado: num(it.valorFinal || it.valorUnit || 0)
     }));
 
     const cotPayload = {
@@ -506,7 +529,7 @@
       itemKey: state.itemKey,
       itemKeys,
       status: 'enviada',
-      origem: 'os_aprovada',
+      origem: 'os_orcamento',
       prioridade: $('cotRfqPrioridade')?.value || 'normal',
       observacao: $('cotRfqObs')?.value?.trim() || '',
       expiraEm,
@@ -541,7 +564,7 @@
         expiraEmTs: expiraDate,
         item: cotPayload.item,
         itens: cotPayload.itens,
-        veiculo: { placa: v.placa, prefixo: v.prefixo, nome: v.nome, tipo: v.tipo },
+        veiculo: v,
         firebaseConfig: firebaseConfigPublica,
         createdAt: criadoEm
       });
@@ -575,7 +598,7 @@
     timeline.push({
       dt: criadoEm,
       user: J().nome || 'Jarvis',
-      acao: 'Enviou cotacao de ' + itensPayload.length + ' peca(s) aprovada(s) para ' + fornecedores.length + ' fornecedor(es).',
+      acao: 'Enviou cotacao de ' + itensPayload.length + ' peca(s) da O.S. para ' + fornecedores.length + ' fornecedor(es).',
       tipo: 'cotacao_pecas_envio',
       interno: true,
       cotacaoId
@@ -608,7 +631,7 @@
           expiraEmTs: expiraDate,
           item: cotPayload.item,
           itens: cotPayload.itens,
-          veiculo: { placa: v.placa, prefixo: v.prefixo, nome: v.nome, tipo: v.tipo },
+          veiculo: v,
           firebaseConfig: firebaseConfigPublica,
           createdAt: criadoEm
         });
@@ -676,6 +699,87 @@
         </div>`;
       }).join('')}`;
   }
+
+  function linhasExportCotacao() {
+    if (!(state.items && state.items.length)) {
+      const osIdAtual = $('osId')?.value || '';
+      const osAtual = (J().os || []).find(o => String(o.id) === String(osIdAtual)) || {
+        id: osIdAtual,
+        clienteId: $('osCliente')?.value || '',
+        veiculoId: $('osVeiculo')?.value || '',
+        placa: $('osPlacaView')?.value || '',
+        prefixo: $('osPrefixo')?.value || '',
+        tipoVeiculoOS: $('osTipoVeiculo')?.value || ''
+      };
+      state.os = osAtual;
+      state.items = typeof W.pecasCotacaoDaTelaOS === 'function' ? W.pecasCotacaoDaTelaOS() : [];
+    }
+    const os = state.os || {};
+    const items = state.items && state.items.length ? state.items : (state.item ? [state.item] : []);
+    const v = veiculoOS(os);
+    const fornecedoresSel = selecionados();
+    const mensagens = state.mensagens || [];
+    const lines = [
+      'COTACAO DE PECAS - thIAguinho',
+      'Gerada em: ' + new Date().toLocaleString('pt-BR'),
+      'O.S.: ' + osRefLabel(os),
+      '',
+      'VEICULO',
+      'Prefixo: ' + (v.prefixo || '-'),
+      'Placa: ' + (v.placa || '-'),
+      'Modelo: ' + (v.nome || '-'),
+      'Ano: ' + (v.ano || '-'),
+      'Chassi: ' + (v.chassi || '-'),
+      'Cor: ' + (v.cor || '-'),
+      'KM: ' + (v.km || '-'),
+      'Tipo: ' + (v.tipo || '-'),
+      '',
+      'ITENS',
+      ...items.map((item, idx) => [
+        (idx + 1) + '. ' + itemTitulo(item),
+        'Qtd: ' + (item.qtd || 1),
+        item.valorFinal ? 'Valor orcado: ' + moeda(item.valorFinal) : ''
+      ].filter(Boolean).join(' | ')),
+      '',
+      'FORNECEDORES SELECIONADOS',
+      ...(fornecedoresSel.length ? fornecedoresSel.map((f, idx) => {
+        const contato = fornecedorContato(f);
+        const msg = mensagens.find(m => String(m.fornecedor?.id || '') === String(f.id || ''));
+        return (idx + 1) + '. ' + (f.nome || f.razao || 'Fornecedor') +
+          (contato.wpp ? ' | WPP: ' + contato.wpp : '') +
+          (contato.email ? ' | Email: ' + contato.email : '') +
+          (msg?.fornecedor?.link ? ' | Link: ' + msg.fornecedor.link : '');
+      }) : ['Nenhum fornecedor selecionado no momento da exportacao.']),
+      '',
+      'OBSERVACAO',
+      $('cotRfqObs')?.value?.trim() || '-'
+    ];
+    return lines.join('\r\n');
+  }
+
+  W.exportarCotacaoFornecedoresOS = async function () {
+    const texto = linhasExportCotacao();
+    const nome = 'cotacao-' + String(state.os?.id || 'os').slice(-6).toUpperCase() + '-' + new Date().toISOString().slice(0, 10) + '.txt';
+    const blob = new Blob([texto], { type: 'text/plain;charset=utf-8' });
+    try {
+      if (typeof W.salvarBlobArquivoOS === 'function') {
+        await W.salvarBlobArquivoOS(blob, nome, 'text/plain');
+      } else {
+        const url = URL.createObjectURL(blob);
+        const a = D.createElement('a');
+        a.href = url;
+        a.download = nome;
+        D.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+      }
+      W.toast?.('Cotacao exportada.', 'ok');
+    } catch (err) {
+      console.warn(err);
+      W.toast?.('Nao foi possivel exportar a cotacao.', 'warn');
+    }
+  };
 
   W.gerarEnvioCotacaoOS = async function () {
     const lista = selecionados();
@@ -846,7 +950,7 @@
       timeline.push({
         dt: nowISO(),
         user: resp.fornecedorNome || 'Fornecedor',
-        acao: 'Recebeu resposta de cotacao para ' + respItens.length + ' peca(s) aprovada(s).',
+        acao: 'Recebeu resposta de cotacao para ' + respItens.length + ' peca(s) da O.S.',
         tipo: 'cotacao_pecas_resposta',
         interno: true,
         respostaId: respId

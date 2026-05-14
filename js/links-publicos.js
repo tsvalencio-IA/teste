@@ -12,6 +12,9 @@
     cliente: '',
     clienteOficial: '',
     cotacaoFornecedor: '',
+    cotacaoFornecedorCurta: '',
+    usarLinkCurtoCotacao: true,
+    incluirFirebaseConfigNoLink: false,
     qrCliente: '',
     apkShareBase: ''
   }, window.THIA_PUBLIC_LINKS || {});
@@ -44,7 +47,7 @@
     const base = cleanBase(cfg.baseUrl) || runtimeBase();
     let url = '';
 
-    if (kind === 'cotacaoFornecedor') url = cfg.cotacaoFornecedor || joinUrl(base, 'cotacao.html');
+    if (kind === 'cotacaoFornecedor') url = cfg.cotacaoFornecedorCurta || cfg.cotacaoFornecedor || joinUrl(base, cfg.usarLinkCurtoCotacao === false ? 'cotacao.html' : 'c.html');
     else if (kind === 'clienteOficial') url = cfg.clienteOficial || joinUrl(base, 'clienteOficial.html');
     else if (kind === 'qrCliente') url = cfg.qrCliente || cfg.cliente || joinUrl(base, 'cliente.html');
     else url = cfg.cliente || joinUrl(base, 'cliente.html');

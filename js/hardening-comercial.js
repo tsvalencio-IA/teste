@@ -99,13 +99,17 @@
     }
 
     if (isEquipe()) {
-      root.querySelectorAll('input, textarea, select, td, th, span, div, button, small, b, strong').forEach(el => {
-        if (!el || el.children.length > 2) return;
+      root.querySelectorAll('td, th, span, button, small, b, strong, label').forEach(el => {
+        if (!el || (el.children && el.children.length)) return;
         const txt = el.textContent || '';
         if (moneyRe.test(txt)) {
           if (el.id === 'kMinhaComissao') el.textContent = 'OCULTO';
           if (/\bR\$\s*\d/.test(txt)) el.textContent = txt.replace(/R\$\s*[\d.,]+/g, 'OCULTO');
         }
+      });
+      root.querySelectorAll('input, textarea').forEach(el => {
+        const txt = el.value || '';
+        if (/\bR\$\s*\d/.test(txt)) el.value = txt.replace(/R\$\s*[\d.,]+/g, 'OCULTO');
       });
     }
 

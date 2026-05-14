@@ -123,6 +123,10 @@
     $('pecaObs').textContent = data.observacao || 'Preencha a cotacao com os dados reais disponiveis.';
     $('pecaQtd').textContent = itens.length > 1 ? String(itens.length) + ' itens' : String(item.qtd || 1);
     $('veiculoInfo').textContent = [veic.prefixo ? 'Prefixo ' + veic.prefixo : '', veic.placa ? 'Placa ' + veic.placa : '', veic.nome || 'Veiculo'].filter(Boolean).join(' / ');
+    if ($('veiculoPlacaPrefixo')) $('veiculoPlacaPrefixo').textContent = [veic.placa ? 'Placa ' + veic.placa : '', veic.prefixo ? 'Prefixo ' + veic.prefixo : ''].filter(Boolean).join(' / ') || '-';
+    if ($('veiculoAnoCor')) $('veiculoAnoCor').textContent = [veic.ano || '', veic.cor || ''].filter(Boolean).join(' / ') || '-';
+    if ($('veiculoChassi')) $('veiculoChassi').textContent = veic.chassi || veic.chassis || '-';
+    if ($('veiculoTipoKm')) $('veiculoTipoKm').textContent = [veic.tipo || '', veic.km ? 'KM ' + veic.km : ''].filter(Boolean).join(' / ') || '-';
     $('prioridadeInfo').textContent = data.prioridade || 'normal';
     $('validadeInfo').textContent = fmtDate(data.expiraEm);
     $('respNome').value = data.fornecedorNome || '';

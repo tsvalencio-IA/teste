@@ -25,7 +25,7 @@
     document.documentElement.setAttribute('data-theme', t);
     let meta = document.querySelector('meta[name="theme-color"]');
     if (!meta) { meta = document.createElement('meta'); meta.name = 'theme-color'; document.head.appendChild(meta); }
-    meta.content = t === 'light' ? '#F4F7FB' : '#060A14';
+    meta.content = t === 'light' ? '#F6F8FB' : '#101722';
   }
 
   function set(t) {

@@ -234,13 +234,59 @@ function _dadosOficinaSessao(d) {
     representante: d.representante || d.responsavel || '',
     orcamentista: d.orcamentista || '',
     nicho: d.nicho || 'carros',
+    logoUrl: d.logoUrl || d.logotipoUrl || d.logo || d.logotipo || '',
+    logotipoUrl: d.logotipoUrl || d.logoUrl || d.logo || d.logotipo || '',
+    logo: d.logo || d.logoUrl || d.logotipoUrl || d.logotipo || '',
+    logotipo: d.logotipo || d.logotipoUrl || d.logoUrl || d.logo || '',
+    timbrado: d.timbrado || null,
+    identidadeVisual: d.identidadeVisual || null,
     // IMPORTANTÍSSIMO: não reduzir o cadastro da oficina na sessão.
     // A planilha/PDF precisam da assinatura e das configs da oficina logada.
     assinatura: d.assinatura || null,
     guinchoConfig: d.guinchoConfig || null,
     firebaseConfig: d.firebaseConfig || null,
-    apiKeys: d.apiKeys || {}
+    apiKeys: d.apiKeys || {},
+    modulos: d.modulos || {},
+    submodulos: d.submodulos || {}
   };
+}
+
+function _normalizarEmailAdminLogin(v) {
+  return String(v || '').trim().toLowerCase();
+}
+
+function _emailValidoAdminLogin(v) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(v || '').trim());
+}
+
+async function _buscarOficinaPorLoginAdmin(usr) {
+  const raw = String(usr || '').trim();
+  const email = _normalizarEmailAdminLogin(raw);
+  const tentativas = [{ campo: 'usuario', op: '==', valor: raw }];
+
+  if (_emailValidoAdminLogin(raw)) {
+    if (email !== raw) tentativas.push({ campo: 'usuario', op: '==', valor: email });
+    const candidatosEmail = [...new Set([email, raw])];
+    ['adminEmails', 'emailsAdmin', 'adminsEmails'].forEach(campo => {
+      candidatosEmail.forEach(valor => tentativas.push({ campo, op: 'array-contains', valor }));
+    });
+  }
+
+  for (const t of tentativas) {
+    if (!t.valor) continue;
+    try {
+      const snap = await db.collection('oficinas').where(t.campo, t.op, t.valor).limit(1).get();
+      if (!snap.empty) {
+        return {
+          doc: snap.docs[0],
+          adminEmail: t.op === 'array-contains' ? email : ''
+        };
+      }
+    } catch (e) {
+      console.warn('[login admin oficina]', t.campo, e.message);
+    }
+  }
+  return null;
 }
 
 async function autenticar() {
@@ -286,9 +332,9 @@ async function autenticar() {
     }
 
     // ── CAMADA 1: Admin/Gestor da oficina → jarvis.html ──
-    const snapOf = await db.collection('oficinas').where('usuario', '==', usr).get();
-    if (!snapOf.empty) {
-      const doc = snapOf.docs[0];
+    const loginOficina = await _buscarOficinaPorLoginAdmin(usr);
+    if (loginOficina) {
+      const doc = loginOficina.doc;
       const d   = doc.data();
 
       if (d.senha !== pwd) throw new Error('Senha incorreta.');
@@ -298,7 +344,8 @@ async function autenticar() {
         j_tid:          doc.id,
         j_tnome:        d.nomeFantasia || 'Oficina',
         j_role:         'admin',
-        j_nome:         d.nomeFantasia || 'Gestor',
+        j_nome:         loginOficina.adminEmail || d.nomeFantasia || 'Gestor',
+        j_admin_email:  loginOficina.adminEmail || (_emailValidoAdminLogin(usr) ? _normalizarEmailAdminLogin(usr) : ''),
         j_gemini:       d.apiKeys?.gemini      || '',
         j_nicho:        d.nicho                || 'carros',
         j_cloud_name:   d.apiKeys?.cloudName   || 'dmuvm1o6m',

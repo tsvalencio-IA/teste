@@ -337,6 +337,15 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
       <div class="form-group"><label class="j-label">Representante na Planilha</label><input class="j-input" id="tRepresentante" placeholder="Nome exibido na assinatura"></div>
     </div>
     <div style="background:rgba(0,212,255,0.06);border:1px solid rgba(0,212,255,0.22);border-radius:6px;padding:12px;margin:10px 0;">
+      <div style="font-family:var(--fm);font-size:0.72rem;color:var(--cyan);letter-spacing:1px;font-weight:800;margin-bottom:10px;">LOGOTIPO / TIMBRADO DA OFICINA</div>
+      <div class="form-row c2">
+        <div class="form-group"><label class="j-label">URL do logotipo</label><input class="j-input" id="tLogoUrl" placeholder="https://res.cloudinary.com/.../logo.png"></div>
+        <div class="form-group"><label class="j-label">Enviar logotipo para Cloudinary</label><input class="j-input" type="file" id="tLogoFile" accept="image/*,.png,.jpg,.jpeg,.webp"></div>
+      </div>
+      <button type="button" class="btn-ghost" onclick="uploadLogoTenant()" style="width:100%;margin-top:6px;">ENVIAR LOGOTIPO PARA CLOUDINARY</button>
+      <div style="font-family:var(--fm);font-size:0.62rem;color:var(--muted2);margin-top:8px;line-height:1.45;">Usado no cabecalho/timbrado dos PDFs e na planilha exportada. Depois do upload, clique em SALVAR TENANT.</div>
+    </div>
+    <div style="background:rgba(0,212,255,0.06);border:1px solid rgba(0,212,255,0.22);border-radius:6px;padding:12px;margin:10px 0;">
       <div style="font-family:var(--fm);font-size:0.72rem;color:var(--cyan);letter-spacing:1px;font-weight:800;margin-bottom:10px;">ASSINATURA DIGITALIZADA DA OFICINA</div>
       <div class="form-row c3">
         <div class="form-group"><label class="j-label">Nome do assinante</label><input class="j-input" id="tAssinaturaNome" placeholder="Ex.: Fábio Valêncio"></div>
@@ -353,6 +362,11 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
     <div class="form-row c2">
       <div class="form-group"><label class="j-label">Usuário de Login (Admin)</label><input class="j-input" id="tUser" placeholder="oficina.silva" style="font-family:var(--fm);"></div>
       <div class="form-group"><label class="j-label">Senha do Admin</label><input class="j-input" id="tSenha" placeholder="senhasegura123"></div>
+    </div>
+    <div class="form-group">
+      <label class="j-label">E-mails admin da oficina / socios</label>
+      <textarea class="j-input" id="tAdminEmails" rows="3" placeholder="socio1@oficina.com&#10;socio2@oficina.com" style="resize:vertical;min-height:74px;font-family:var(--fm);"></textarea>
+      <div style="font-family:var(--fm);font-size:0.62rem;color:var(--muted2);margin-top:6px;line-height:1.45;">Um e-mail por linha, virgula ou ponto e virgula. Todos entram como admin da oficina usando a senha admin acima. O login antigo em Usuario continua funcionando.</div>
     </div>
     <div class="form-row c2">
       <div class="form-group"><label class="j-label">WhatsApp do Proprietário</label><input class="j-input" id="tWpp" placeholder="17999999999"></div>
@@ -405,6 +419,11 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
         <label class="mod-check"><input type="checkbox" id="mAgd" value="agenda"> 📅 Agenda</label>
         <label class="mod-check"><input type="checkbox" id="mRH" value="rh"> 👷 Equipe / RH</label>
         <label class="mod-check"><input type="checkbox" id="mComissoes" value="comissoes"> 💸 Ver Comissões</label>
+        <label class="mod-check"><input type="checkbox" id="mAutoPecas" value="autoPecas"> 🏪 Autopeças / Balcão</label>
+        <label class="mod-check"><input type="checkbox" id="mVendaTerceiros" value="vendaTerceiros"> 🤝 Venda para terceiros</label>
+        <label class="mod-check"><input type="checkbox" id="mVarejo" value="varejo"> 🛒 Varejo</label>
+        <label class="mod-check"><input type="checkbox" id="mAtacado" value="atacado"> 📦 Atacado</label>
+        <label class="mod-check"><input type="checkbox" id="mComissaoVendas" value="comissaoVendas"> 💸 Comissão sobre vendas</label>
         <label class="mod-check"><input type="checkbox" id="mTabelaTempa" value="tabelaTempa" checked> 📖 Tabela Tempária SINDIREPA</label>
         <label class="mod-check"><input type="checkbox" id="mCilia" value="cilia" checked> 🔎 Pesquisa Cília API</label>
       </div>
@@ -433,6 +452,10 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
     <div class="form-row c2">
       <div class="form-group"><label class="j-label">Tenant</label><select class="j-select" id="sfTenant"><option value="">Avulso</option></select></div>
       <div class="form-group"><label class="j-label">Data</label><input type="date" class="j-input" id="sfData"></div>
+    </div>
+    <div class="form-row c2">
+      <div class="form-group"><label class="j-label">Responsavel por venda/indicacao</label><input class="j-input" id="sfComissaoResp" placeholder="Nome do vendedor, parceiro ou socio"></div>
+      <div class="form-group"><label class="j-label">% Comissao SaaS</label><input type="number" step="0.1" class="j-input" id="sfComissaoPct" placeholder="0"></div>
     </div>
   </div>
   <div class="modal-foot"><button class="btn-ghost" onclick="fecharModal('modalSaasFin')">CANCELAR</button><button class="btn-primary" onclick="salvarSaasFin()">LANÇAR</button></div>
@@ -618,7 +641,7 @@ function renderDashboard(){
 
 function renderTenants(filter=''){
   const list=filter?allTenants.filter(t=>(t.nomeFantasia||'').toLowerCase().includes(filter.toLowerCase())):allTenants;
-  const mods_map={os:'O.S.',crm:'CRM',estoque:'Est.',financeiro:'Fin.',ia:'IA',chat:'Chat',agenda:'Agd.',rh:'RH',comissoes:'Comiss.',tabelaTempa:'Tempa'};
+  const mods_map={os:'O.S.',crm:'CRM',estoque:'Est.',financeiro:'Fin.',ia:'IA',chat:'Chat',agenda:'Agd.',rh:'RH',comissoes:'Comiss.',autoPecas:'Autopeças',vendaTerceiros:'Terceiros',varejo:'Varejo',atacado:'Atacado',comissaoVendas:'Com.Vendas',tabelaTempa:'Tempa'};
   $('tbTenants').innerHTML=list.map(t=>{
     const stCls=t.status==='Online'?'pill-green':t.status==='Trial'?'pill-warn':'pill-danger';
     const mods=Object.entries(t.modulos||{}).filter(([,v])=>v).map(([k])=>`<span class="pill pill-purple" style="font-size:0.5rem;padding:1px 6px">${mods_map[k]||k}</span>`).join(' ');
@@ -643,7 +666,7 @@ function filtrarTenants(v){renderTenants(v);}
 // TENANT CRUD
 const CAMPOS_DADOS_OFICINA=[
   'tRazaoSocial','tCnpj','tEndereco','tNumero','tBairro','tCidade','tUf','tCep',
-  'tTelefone','tEmail','tResponsavel','tOrcamentista','tRepresentante','tAssinaturaNome','tAssinaturaCargo','tAssinaturaDocumento','tAssinaturaUrl'
+  'tTelefone','tEmail','tResponsavel','tOrcamentista','tRepresentante','tLogoUrl','tAssinaturaNome','tAssinaturaCargo','tAssinaturaDocumento','tAssinaturaUrl'
 ];
 const CAMPOS_FIREBASE_OFICINA=[
   'tFbApiKey','tFbAuthDomain','tFbProjectId','tFbStorageBucket','tFbMessagingSenderId','tFbAppId'
@@ -666,18 +689,39 @@ function montarFirebaseOficina(){
   return Object.values(cfg).some(Boolean) ? cfg : null;
 }
 
+function normalizarEmailsAdminTenant(raw){
+  const invalidos=[];
+  const emails=[...new Set(String(raw||'')
+    .split(/[\n,;]+/)
+    .map(v=>v.trim().toLowerCase())
+    .filter(Boolean)
+    .filter(v=>{
+      const ok=/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
+      if(!ok) invalidos.push(v);
+      return ok;
+    }))];
+  return {emails, invalidos};
+}
+
+function emailsAdminTenantTexto(t){
+  const src=t?.adminEmails||t?.emailsAdmin||t?.adminsEmails||[];
+  if(Array.isArray(src)) return src.join('\n');
+  return String(src||'').split(/[\n,;]+/).map(v=>v.trim()).filter(Boolean).join('\n');
+}
+
 function prepTenant(mode,id=null){
-  ['tId','tNome','tUser','tSenha','tWpp','tGemini','tCloudName','tCloudPreset','tAssinaturaFile',...CAMPOS_DADOS_OFICINA,...CAMPOS_FIREBASE_OFICINA].forEach(f=>{if($(f))$(f).value='';});
-  ['mOS','mCrm','mEst','mFin','mIA','mChat','mAgd','mRH','mComissoes','mTabelaTempa','mCilia'].forEach(f=>{if($(f))$(f).checked=false;});
+  ['tId','tNome','tUser','tSenha','tAdminEmails','tWpp','tGemini','tCloudName','tCloudPreset','tLogoFile','tAssinaturaFile',...CAMPOS_DADOS_OFICINA,...CAMPOS_FIREBASE_OFICINA].forEach(f=>{if($(f))$(f).value='';});
+  ['mOS','mCrm','mEst','mFin','mIA','mChat','mAgd','mRH','mComissoes','mAutoPecas','mVendaTerceiros','mVarejo','mAtacado','mComissaoVendas','mTabelaTempa','mCilia'].forEach(f=>{if($(f))$(f).checked=false;});
   $('tStatus').value='Online'; $('tNicho').value='carros'; $('tPlano').value='trial';
   $('tCloudName').value='dmuvm1o6m'; $('tCloudPreset').value='evolution';
   $('modalTenantTitle').innerText='NOVA OFICINA (TENANT)';
   // Habilita módulos padrão
-  ['mOS','mCrm','mEst','mFin','mTabelaTempa','mCilia'].forEach(f=>{if($(f))$(f).checked=true;});
+  ['mOS','mCrm','mEst','mFin','mAutoPecas','mVendaTerceiros','mVarejo','mComissaoVendas','mTabelaTempa','mCilia'].forEach(f=>{if($(f))$(f).checked=true;});
   if(mode==='edit'&&id){
     const t=allTenants.find(x=>x.id===id); if(!t) return;
     $('tId').value=t.id; $('tNome').value=t.nomeFantasia||''; $('tUser').value=t.usuario||'';
     $('tSenha').value=t.senha||''; $('tWpp').value=t.wpp||''; $('tNicho').value=t.nicho||'carros';
+    if($('tAdminEmails')) $('tAdminEmails').value=emailsAdminTenantTexto(t);
     $('tPlano').value=t.plano||'trial'; $('tStatus').value=t.status||'Online';
     $('tRazaoSocial').value=t.razaoSocial||t.razao||'';
     $('tCnpj').value=t.cnpj||t.doc||t.documento||'';
@@ -692,6 +736,7 @@ function prepTenant(mode,id=null){
     $('tResponsavel').value=t.responsavel||'';
     $('tOrcamentista').value=t.orcamentista||'';
     $('tRepresentante').value=t.representante||t.responsavel||'';
+    if($('tLogoUrl')) $('tLogoUrl').value=t.logoUrl||t.logotipoUrl||t.logo||t.logotipo||t.logoOficinaUrl||t.timbradoLogoUrl||'';
     const ass=t.assinatura||{};
     if($('tAssinaturaNome')) $('tAssinaturaNome').value=ass.nomeResponsavel||ass.nome||t.representante||t.responsavel||'';
     if($('tAssinaturaCargo')) $('tAssinaturaCargo').value=ass.cargo||ass.funcao||'Responsável técnico';
@@ -711,6 +756,11 @@ function prepTenant(mode,id=null){
     $('mFin').checked=!!m.financeiro; $('mIA').checked=!!m.ia; $('mChat').checked=!!m.chat;
     $('mAgd').checked=!!m.agenda; $('mRH').checked=!!m.rh;
     if($('mComissoes')) $('mComissoes').checked=!!m.comissoes;
+    if($('mAutoPecas')) $('mAutoPecas').checked=!!m.autoPecas;
+    if($('mVendaTerceiros')) $('mVendaTerceiros').checked=!!m.vendaTerceiros;
+    if($('mVarejo')) $('mVarejo').checked=m.varejo !== false;
+    if($('mAtacado')) $('mAtacado').checked=!!m.atacado;
+    if($('mComissaoVendas')) $('mComissaoVendas').checked=m.comissaoVendas !== false && (!!m.autoPecas || !!m.estoque);
     if($('mTabelaTempa')) $('mTabelaTempa').checked=m.tabelaTempa !== false; // default ligado
     if($('mCilia')) $('mCilia').checked=m.cilia !== false; // default ligado
     $('modalTenantTitle').innerText='EDITAR TENANT: '+(t.nomeFantasia||'').toUpperCase();
@@ -742,19 +792,49 @@ async function uploadAssinaturaTenant(){
   }
 }
 
+async function uploadLogoTenant(){
+  const file=$('tLogoFile')?.files?.[0];
+  if(!file){toast('Selecione uma imagem do logotipo','warn');return;}
+  const cloud=$v('tCloudName')||'dmuvm1o6m';
+  const preset=$v('tCloudPreset')||'evolution';
+  if(!cloud||!preset){toast('Informe Cloudinary Cloud Name e Upload Preset','warn');return;}
+  try{
+    toast('Enviando logotipo para Cloudinary...','info');
+    const fd=new FormData();
+    fd.append('file',file);
+    fd.append('upload_preset',preset);
+    fd.append('folder','thiaguinho-logotipos');
+    fd.append('context','tipo=logotipo_oficina|tenant=' + ($v('tId')||$v('tNome')||'novo'));
+    const resp=await fetch(`https://api.cloudinary.com/v1_1/${cloud}/image/upload`,{method:'POST',body:fd});
+    const json=await resp.json();
+    if(!resp.ok||!json.secure_url) throw new Error(json.error?.message||'Cloudinary nao retornou URL');
+    $('tLogoUrl').value=json.secure_url;
+    toast('Logotipo enviado. Agora clique em SALVAR TENANT.','ok');
+  }catch(e){
+    console.error(e);
+    toast('Erro ao enviar logotipo: '+e.message,'err');
+  }
+}
+
 function montarSubmodulosComerciais(){
   const mod = {
     os:$('mOS').checked, crm:$('mCrm').checked, estoque:$('mEst').checked,
     financeiro:$('mFin').checked, ia:$('mIA').checked, chat:$('mChat').checked,
     agenda:$('mAgd').checked, rh:$('mRH').checked,
     comissoes:$('mComissoes')?$('mComissoes').checked:false,
+    autoPecas:$('mAutoPecas')?$('mAutoPecas').checked:false,
+    vendaTerceiros:$('mVendaTerceiros')?$('mVendaTerceiros').checked:false,
+    varejo:$('mVarejo')?$('mVarejo').checked:true,
+    atacado:$('mAtacado')?$('mAtacado').checked:false,
+    comissaoVendas:$('mComissaoVendas')?$('mComissaoVendas').checked:false,
     tabelaTempa:$('mTabelaTempa')?$('mTabelaTempa').checked:true,
     cilia:$('mCilia')?$('mCilia').checked:true
   };
   return {
     os:{criar:mod.os, editar:mod.os, aprovar:mod.os, salvarContinuar:mod.os, pdf:mod.os, xlsx:mod.os, assinatura:mod.os, guincho:mod.os, temparia:mod.os&&mod.tabelaTempa, execucaoEquipe:mod.os&&mod.rh, auditoria:mod.os},
-    financeiro:{receitas:mod.financeiro, despesas:mod.financeiro, boletos:mod.financeiro, dre:mod.financeiro, contasPagar:mod.financeiro, contasReceber:mod.financeiro, boletosNF:mod.financeiro, financeiroPorOS:mod.financeiro&&mod.os},
+    financeiro:{receitas:mod.financeiro, despesas:mod.financeiro, boletos:mod.financeiro, dre:mod.financeiro, contasPagar:mod.financeiro, contasReceber:mod.financeiro, boletosNF:mod.financeiro, financeiroPorOS:mod.financeiro&&mod.os, receitasBalcao:mod.financeiro&&mod.autoPecas, comissoesVendas:mod.financeiro&&mod.comissaoVendas},
     nfXml:{entradaXml:mod.estoque, entradaManual:mod.estoque, fornecedores:mod.estoque, vincularOS:mod.estoque&&mod.os, estoque:mod.estoque, devolucao:mod.estoque, garantia:mod.estoque, financeiroNF:mod.estoque&&mod.financeiro},
+    autoPecas:{balcao:mod.autoPecas, terceiros:mod.autoPecas&&mod.vendaTerceiros, varejo:mod.autoPecas&&mod.varejo, atacado:mod.autoPecas&&mod.atacado, baixaEstoque:mod.autoPecas&&mod.estoque, financeiro:mod.autoPecas&&mod.financeiro, comissaoVendas:mod.autoPecas&&mod.comissaoVendas},
     ia:{jarvis:mod.ia, equipe:mod.ia&&mod.rh, superadmin:mod.ia, cliente:mod.ia&&mod.crm},
     cliente:{portalCliente:mod.crm, clienteOficial:mod.crm&&mod.os, mensagens:mod.crm&&mod.chat, aprovacaoOnline:mod.crm&&mod.os, documentos:mod.crm&&mod.os},
     integracoes:{cilia:mod.cilia, tabelaTempa:mod.tabelaTempa, pwa:true, apk:true, exe:true}
@@ -767,6 +847,9 @@ function avisosDependenciasModulos(){
   if($('mEst')?.checked && !$('mFin')?.checked) avisos.push('NF/XML sem Financeiro não gera contas a pagar.');
   if($('mRH')?.checked && !$('mOS')?.checked) avisos.push('Equipe depende de O.S. para execução.');
   if($('mTabelaTempa')?.checked && !$('mOS')?.checked) avisos.push('Tempária depende de O.S. para aplicar TMO.');
+  if($('mAutoPecas')?.checked && !$('mEst')?.checked) avisos.push('Autopeças precisa de Estoque para baixa e margem por item.');
+  if($('mAutoPecas')?.checked && !$('mFin')?.checked) avisos.push('Autopeças sem Financeiro registra venda, mas não gera caixa/contas a receber.');
+  if($('mComissaoVendas')?.checked && !$('mAutoPecas')?.checked) avisos.push('Comissão de vendas depende do módulo Autopeças/Balcão.');
   return avisos;
 }
 
@@ -774,8 +857,16 @@ async function salvarTenant(){
   if(!$v('tNome')||!$v('tUser')||!$v('tSenha')){toast('⚠ Preencha nome, usuário e senha','warn');return;}
   const geminiKey=$v('tGemini');
   const firebaseConfig=montarFirebaseOficina();
+  const adminEmailsParsed=normalizarEmailsAdminTenant($v('tAdminEmails'));
+  if(adminEmailsParsed.invalidos.length){
+    toast('E-mail admin invalido: '+adminEmailsParsed.invalidos[0],'warn');
+    return;
+  }
   const payload={
     nomeFantasia:$v('tNome'), usuario:$v('tUser'), senha:$v('tSenha'),
+    adminEmails:adminEmailsParsed.emails,
+    emailsAdmin:adminEmailsParsed.emails,
+    adminsEmails:adminEmailsParsed.emails,
     wpp:$v('tWpp'), nicho:$v('tNicho'), plano:$v('tPlano'), status:$v('tStatus'),
     razaoSocial:$v('tRazaoSocial'),
     razao:$v('tRazaoSocial'),
@@ -798,6 +889,12 @@ async function salvarTenant(){
     responsavel:$v('tResponsavel'),
     orcamentista:$v('tOrcamentista'),
     representante:$v('tRepresentante')||$v('tResponsavel'),
+    logoUrl:$v('tLogoUrl'),
+    logotipoUrl:$v('tLogoUrl'),
+    logo:$v('tLogoUrl'),
+    logotipo:$v('tLogoUrl'),
+    timbrado:{logoUrl:$v('tLogoUrl'), atualizadoEm:new Date().toISOString()},
+    identidadeVisual:{logoUrl:$v('tLogoUrl'), atualizadoEm:new Date().toISOString()},
     assinatura:{
       nomeResponsavel:$v('tAssinaturaNome')||$v('tRepresentante')||$v('tResponsavel'),
       nome:$v('tAssinaturaNome')||$v('tRepresentante')||$v('tResponsavel'),
@@ -818,6 +915,11 @@ async function salvarTenant(){
       financeiro:$('mFin').checked, ia:$('mIA').checked, chat:$('mChat').checked,
       agenda:$('mAgd').checked, rh:$('mRH').checked,
       comissoes:$('mComissoes')?$('mComissoes').checked:false,
+      autoPecas:$('mAutoPecas')?$('mAutoPecas').checked:false,
+      vendaTerceiros:$('mVendaTerceiros')?$('mVendaTerceiros').checked:false,
+      varejo:$('mVarejo')?$('mVarejo').checked:true,
+      atacado:$('mAtacado')?$('mAtacado').checked:false,
+      comissaoVendas:$('mComissaoVendas')?$('mComissaoVendas').checked:false,
       tabelaTempa:$('mTabelaTempa')?$('mTabelaTempa').checked:true,  // default true
       cilia:$('mCilia')?$('mCilia').checked:true
     },
@@ -967,16 +1069,22 @@ async function testarGemini(){
 
 // SAAS FIN
 function prepSaasFin(){
-  ['sfDesc','sfValor'].forEach(f=>{if($(f))$(f).value='';});
+  ['sfDesc','sfValor','sfComissaoResp','sfComissaoPct'].forEach(f=>{if($(f))$(f).value='';});
   $('sfTipo').value='Entrada';
   $('sfData').value=new Date().toISOString().split('T')[0];
 }
 async function salvarSaasFin(){
   if(!$v('sfDesc')||!$v('sfValor')){toast('⚠ Preencha descrição e valor','warn');return;}
-  await db.collection('saas_financeiro').add({
-    tipo:$v('sfTipo'),desc:$v('sfDesc'),valor:parseFloat($v('sfValor')||0),
-    tenantId:$v('sfTenant')||null,data:$v('sfData'),createdAt:new Date().toISOString()
+  const valor=parseFloat($v('sfValor')||0);
+  const pct=parseFloat($v('sfComissaoPct')||0);
+  const resp=$v('sfComissaoResp');
+  const ref=await db.collection('saas_financeiro').add({
+    tipo:$v('sfTipo'),desc:$v('sfDesc'),valor,
+    tenantId:$v('sfTenant')||null,data:$v('sfData'),comissaoResponsavel:resp,comissaoPercentual:pct,comissaoValor:($v('sfTipo')==='Entrada'&&resp&&pct>0)?+(valor*pct/100).toFixed(2):0,createdAt:new Date().toISOString()
   });
+  if($v('sfTipo')==='Entrada'&&resp&&pct>0){
+    await db.collection('saas_financeiro').add({tipo:'Saída',desc:'Comissão SaaS - '+resp,valor:+(valor*pct/100).toFixed(2),tenantId:$v('sfTenant')||null,data:$v('sfData'),comissaoDe:ref.id,comissaoResponsavel:resp,comissaoPercentual:pct,createdAt:new Date().toISOString()});
+  }
   toast('✓ LANÇAMENTO REGISTRADO'); fecharModal('modalSaasFin');
 }
 function renderSaasFin(){
@@ -984,7 +1092,8 @@ function renderSaasFin(){
   $('tbSaasFin').innerHTML=allSaasFin.map(f=>{
     if(f.tipo==='Entrada') rec+=f.valor||0; else des+=f.valor||0;
     const t=allTenants.find(x=>x.id===f.tenantId);
-    return `<tr><td style="font-family:var(--fm);font-size:0.72rem;color:var(--muted)">${dtBr(f.data)}</td><td><span class="pill ${f.tipo==='Entrada'?'pill-green':'pill-danger'}">${f.tipo}</span></td><td>${f.desc||'-'}</td><td style="font-size:0.75rem">${t?.nomeFantasia||'Avulso'}</td><td style="font-family:var(--fm);font-weight:700;color:${f.tipo==='Entrada'?'var(--success)':'var(--danger)'}">${moeda(f.valor)}</td></tr>`;
+    const com = f.comissaoValor ? `<br><small style="color:var(--warn)">Comissão: ${f.comissaoResponsavel||'-'} ${moeda(f.comissaoValor)}</small>` : '';
+    return `<tr><td style="font-family:var(--fm);font-size:0.72rem;color:var(--muted)">${dtBr(f.data)}</td><td><span class="pill ${f.tipo==='Entrada'?'pill-green':'pill-danger'}">${f.tipo}</span></td><td>${f.desc||'-'}${com}</td><td style="font-size:0.75rem">${t?.nomeFantasia||'Avulso'}</td><td style="font-family:var(--fm);font-weight:700;color:${f.tipo==='Entrada'?'var(--success)':'var(--danger)'}">${moeda(f.valor)}</td></tr>`;
   }).join('')||'<tr><td colspan="5" style="text-align:center;padding:20px;color:var(--muted);font-family:var(--fm);font-size:0.75rem">Sem lançamentos</td></tr>';
   $('saasRec').innerText=moeda(rec); $('saasDes').innerText=moeda(des);
   const luc=rec-des; $('saasLuc').innerText=moeda(luc); $('saasLuc').style.color=luc>=0?'var(--cyan)':'var(--danger)';

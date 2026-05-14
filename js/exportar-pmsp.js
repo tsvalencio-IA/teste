@@ -372,6 +372,31 @@
     };
   }
 
+  function normalizarLogoExportar(fonte) {
+    fonte = fonte || {};
+    const a = fonte.timbrado || fonte.identidadeVisual || fonte.marcaVisual || fonte.branding || fonte;
+    return {
+      url: pick(
+        a.logoUrl,
+        a.logotipoUrl,
+        a.logoOficinaUrl,
+        a.logoOficina,
+        a.timbradoLogoUrl,
+        a.timbradoUrl,
+        a.marcaUrl,
+        a.imagemLogo,
+        a.urlLogo,
+        a.logo,
+        a.logotipo,
+        fonte.logoUrl,
+        fonte.logotipoUrl,
+        fonte.logo,
+        fonte.logotipo
+      ),
+      nome: pick(a.nomeFantasia, a.nome, fonte.nomeFantasia, fonte.nome)
+    };
+  }
+
   async function obterAssinaturaExportar(os, tenant) {
     const fontes = [];
 
@@ -442,6 +467,52 @@
 
     // Somente se nenhuma imagem existir, usa fallback textual.
     return primeiraComTexto(fontes) || normalizarAssinaturaExportar({});
+  }
+
+  async function obterLogoOficinaExportar(os, tenant) {
+    const fontes = [];
+    try { fontes.push(os && os.dadosOficina); } catch(e) {}
+    try { fontes.push(os && os.oficinaDados); } catch(e) {}
+    try { fontes.push(os && os.oficina); } catch(e) {}
+    try { fontes.push(tenant); } catch(e) {}
+    try { fontes.push(window.J && window.J.oficina); } catch(e) {}
+    try { fontes.push(window.J); } catch(e) {}
+    try { fontes.push(parseJsonSeguro(sessionStorage.getItem('j_oficina'))); } catch(e) {}
+
+    for (const fonte of fontes) {
+      const logo = normalizarLogoExportar(fonte);
+      if (limparTexto(logo.url)) return logo;
+    }
+
+    try {
+      const db = window.J && window.J.db;
+      const tid = window.J && window.J.tid;
+      if (db && tid && tid !== 'MASTER_ADMIN') {
+        const snap = await db.collection('oficinas').doc(tid).get();
+        if (snap && snap.exists) {
+          const logo = normalizarLogoExportar({ id: snap.id, ...snap.data() });
+          if (limparTexto(logo.url)) return logo;
+        }
+      }
+    } catch(e) {
+      console.warn('[PMSP XLSX] Nao foi possivel buscar logotipo em oficinas:', e?.message || e);
+    }
+
+    try {
+      const db = window.J && window.J.db;
+      const tid = window.J && window.J.tid;
+      if (db && tid && tid !== 'MASTER_ADMIN') {
+        const snap = await db.collection('tenants').doc(tid).get();
+        if (snap && snap.exists) {
+          const logo = normalizarLogoExportar({ id: snap.id, ...snap.data() });
+          if (limparTexto(logo.url)) return logo;
+        }
+      }
+    } catch(e) {
+      console.warn('[PMSP XLSX] Nao foi possivel buscar logotipo em tenants:', e?.message || e);
+    }
+
+    return normalizarLogoExportar({});
   }
 
   async function imagemUrlParaDataURLAssinatura(url) {
@@ -552,8 +623,31 @@
     }
   }
 
+  async function inserirLogoOficinaExcelJS(wb, ws, logo) {
+    const dadosLogo = normalizarLogoExportar(logo);
+    const url = limparTexto(dadosLogo.url);
+    if (!url) return false;
+    const img = await imagemUrlParaDataURLAssinatura(url);
+    if (!img) return false;
+    try {
+      const imageId = wb.addImage({ base64: img.base64, extension: img.extension });
+      // Mantem o brasao/cabecalho oficial do modelo PMSP intacto e usa o canto direito
+      // superior como timbrado discreto da oficina.
+      ws.addImage(imageId, {
+        tl: { col: 6.18, row: 1.15 },
+        ext: { width: 72, height: 34 },
+        editAs: 'oneCell'
+      });
+      return true;
+    } catch (e) {
+      console.warn('[PMSP XLSX] Falha ao embutir logotipo da oficina:', e?.message || e);
+      return false;
+    }
+  }
+
   function dadosTenant(tenant) {
     tenant = tenant || {};
+    const logo = normalizarLogoExportar(tenant);
     return {
       razaoSocial: pick(tenant.razaoSocial, tenant.razao, tenant.nomeFantasia, tenant.tnome, tenant.nome),
       cnpj: pick(tenant.cnpj, tenant.doc, tenant.documento),
@@ -561,7 +655,8 @@
       telefone: pick(tenant.telefone, tenant.wpp, tenant.celular),
       orcamentista: pick(tenant.orcamentista, tenant.responsavel, tenant.nome, tenant.tnome),
       representante: pick(tenant.representante, tenant.responsavel, tenant.orcamentista, tenant.nome, tenant.tnome),
-      cidade: pick(tenant.cidade, tenant.municipio)
+      cidade: pick(tenant.cidade, tenant.municipio),
+      logoUrl: logo.url
     };
   }
 
@@ -1261,6 +1356,7 @@
 
     const { tenant, linhasServ, linhasPecas, aprovacaoInfo } = coletarDados(os, cli, veiculo);
     const assinaturaExportar = await obterAssinaturaExportar(os, tenant);
+    const logoExportar = await obterLogoOficinaExportar(os, tenant);
     const resumoSecoes = resumirSecoes(linhasServ);
     const dc = dadosCliente(cli, os);
     const dv = dadosVeiculo(veiculo, os);
@@ -1326,6 +1422,7 @@
     setCell(ws, 'A15', `ENDERECO: ${dc.endereco}`);
     setCell(ws, 'A17', `FISCAL DO CONTRATO: ${dc.fiscal}`);
     aplicarAjustesCabecalho(ws);
+    await inserirLogoOficinaExcelJS(wb, ws, logoExportar);
     setCell(ws, 'B18', 'CÓD. SERVIÇO / SISTEMA / TIPO VEÍCULO');
     setCell(ws, 'D18', 'DESCRIÇÃO DO SERVIÇO');
 
@@ -1426,6 +1523,7 @@
       [`RAZAO SOCIAL: ${dt.razaoSocial}`, `CNPJ: ${dt.cnpj}`],
       [`ENDERECO: ${dt.endereco}`],
       [`TELEFONE: ${dt.telefone}`, `ORCAMENTISTA: ${dt.orcamentista}`],
+      [`LOGOTIPO/TIMBRADO: ${dt.logoUrl || 'nao cadastrado'}`],
       [`REPRESENTANTE LEGAL: ${dt.representante}`],
       ['DADOS DO CLIENTE'],
       [`UNIDADE: ${dc.unidade}`, `CNPJ: ${dc.doc}`],
