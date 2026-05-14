@@ -2321,7 +2321,7 @@ window.escutarClientes = function() {
 window.escutarVeiculos = function() {
   db.collection('veiculos').where('tenantId','==',J.tid).onSnapshot(snap => {
     J.veiculos = snap.docs.map(d=>({id:d.id,...d.data()}));
-    window.renderVeiculos(); window.popularSelects();
+    window.renderVeiculos(); window.renderClientes(); window.popularSelects();
   });
 }
 window.escutarEstoque = function() {
@@ -2652,7 +2652,19 @@ window.salvarCliente = async function() {
 window.renderClientes = function() {
   if(!$('tbClientes')) return;
   $('tbClientes').innerHTML = J.clientes.map(c=>{
-    const nVeics = J.veiculos.filter(v=>v.clienteId===c.id).length;
+    const docCliente = String(c.doc || c.cpf || c.cnpj || '').replace(/\D+/g,'');
+    const nomeCliente = String(c.nome || c.razaoSocial || '').trim().toLowerCase();
+    const veicsCliente = J.veiculos.filter(v=>{
+      const ids = [v.clienteId, v.donoId, v.ownerId, v.cliente, v.clienteRef].filter(Boolean).map(String);
+      if (ids.includes(String(c.id))) return true;
+      const docVeic = String(v.clienteDoc || v.cpf || v.cnpj || '').replace(/\D+/g,'');
+      if (docCliente && docVeic && docCliente === docVeic) return true;
+      const nomeVeic = String(v.clienteNome || v.dono || v.proprietario || '').trim().toLowerCase();
+      return !!nomeCliente && !!nomeVeic && nomeVeic === nomeCliente;
+    });
+    const nVeics = veicsCliente.length;
+    const placasResumo = veicsCliente.map(v => [v.prefixo || v.frota || '', v.placa || 'S/PLACA'].filter(Boolean).join(' / ')).slice(0, 3).join(' - ');
+    const extraVeics = nVeics > 3 ? ` +${nVeics - 3}` : '';
     const btnWpp = c.wpp
       ? `<button class="btn-success" style="margin-right:4px" onclick="window._wppAcessoCliente('${c.id}')" title="Enviar acesso via WhatsApp">💬</button>`
       : '';
@@ -2662,7 +2674,7 @@ window.renderClientes = function() {
     return `<tr>
       <td><strong>${c.nome}</strong>${pillTipo}<div style="font-family:var(--fm);font-size:0.65rem;color:var(--muted)">${c.login||'sem login'} / PIN: ${c.pin||'—'}</div></td>
       <td style="font-family:var(--fm);font-size:0.75rem">${c.wpp||'-'}</td>
-      <td><span class="pill pill-cyan">${nVeics}</span></td>
+      <td><span class="pill pill-cyan" title="${placasResumo || 'Sem veiculos'}">${nVeics} VEIC.</span></td>
       <td style="white-space:nowrap">
         <button class="btn-ghost" style="margin-right:4px" onclick="window.prepCliente('edit','${c.id}');abrirModal('modalCliente')">✏</button>
         ${btnWpp}

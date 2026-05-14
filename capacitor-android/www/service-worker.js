@@ -12,7 +12,7 @@
  *
  * Powered by thIAguinho SoluÃ§Ãµes Digitais
  */
-const CACHE_VERSION = 'thiaguinho-timbrado-20260514-19';
+const CACHE_VERSION = 'thiaguinho-pdf-colunas-20260514-23';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const RUNTIME_CACHE = `${CACHE_VERSION}-runtime`;
 

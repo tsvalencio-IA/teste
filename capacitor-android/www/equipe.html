@@ -790,6 +790,30 @@ if($('topCargo')) {
   $('topCargo').innerText = roleDisplay.toUpperCase();
 }
 aplicarModoOperacionalEquipe();
+
+function repararLayoutEquipe(){
+  try{
+    document.body?.classList.add('equipe-page');
+    const force = (sel, props) => {
+      document.querySelectorAll(sel).forEach(el => {
+        Object.entries(props).forEach(([k,v]) => el.style.setProperty(k, v, 'important'));
+      });
+    };
+    force('.topbar', {display:'flex', position:'fixed', top:'0', left:'0', right:'0', 'z-index':'100'});
+    force('.page', {display:'block', position:'relative', width:'100%', 'min-height':'100vh'});
+    force('.tab-bar', {display:'flex', 'overflow-x':'auto', 'white-space':'nowrap'});
+    force('.content', {display:'block', width:'100%'});
+    force('.section', {width:'100%'});
+    document.querySelectorAll('.section').forEach(s => {
+      s.style.setProperty('display', s.classList.contains('active') ? 'block' : 'none', 'important');
+    });
+    force('.mec-kpis', {display:'grid'});
+    force('.kanban-wrap', {display: window.innerWidth <= 760 ? 'flex' : 'grid'});
+    if(window.innerWidth <= 760) force('.kanban-wrap', {'flex-direction':'column'});
+  }catch(e){ console.warn('[Equipe] Falha ao reparar layout', e); }
+}
+repararLayoutEquipe();
+window.addEventListener('resize', repararLayoutEquipe);
 // TOAST
 function toast(msg,type='ok'){
   const el=document.createElement('div');
@@ -814,6 +838,7 @@ function irTab(id,el){
   document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
   $(id)?.classList.add('active'); el?.classList.add('active');
+  repararLayoutEquipe();
 }
 
 const dtBr = iso=>iso?new Date(iso).toLocaleDateString('pt-BR'):'-';
