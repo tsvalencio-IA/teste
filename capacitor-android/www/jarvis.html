@@ -199,6 +199,7 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
 .form-row{display:grid;gap:14px;margin-bottom:16px;}
 .form-row.cols-2{grid-template-columns:1fr 1fr;}
 .form-row.cols-3{grid-template-columns:1fr 1fr 1fr;}
+.form-row.cols-4{grid-template-columns:repeat(4,1fr);}
 
 .grid-servicos { display:grid; grid-template-columns: 1fr 100px 40px; gap:8px; align-items:center; margin-bottom:8px; }
 .grid-pecas { display:grid; grid-template-columns: 2fr 80px 90px 90px 40px; gap:8px; align-items:center; margin-bottom:8px; }
@@ -229,8 +230,14 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
 #modalOS .modal{max-width:min(1320px,96vw)!important;width:96vw;height:min(94vh,980px);margin:0;display:flex;flex-direction:column;}
 #modalOS .modal-tabs{flex-shrink:0;}
 #modalOS .tab-pane{min-height:0;}
-#modalOS .tab-pane.active{flex:1;overflow-y:auto;}
-#modalOS .modal-foot{flex-shrink:0;}
+#modalOS .tab-pane.active{flex:1;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;scroll-padding:88px 0 130px;}
+#modalOS #tabOS1{padding-bottom:118px;}
+#modalOS .modal-foot{flex-shrink:0;box-shadow:0 -12px 26px rgba(0,0,0,.24);}
+#containerServicosOS > div,
+#containerPecasOS > div{scroll-margin-bottom:140px;}
+#containerServicosOS > div:last-child,
+#containerPecasOS > div:last-child{margin-bottom:4px;}
+#modalOS .os-auto-row-hint{font-family:var(--fm);font-size:.62rem;color:var(--muted2);letter-spacing:.7px;margin-top:4px;}
 #containerServicosOS > div:has(.serv-secao-hora){grid-template-columns:minmax(180px,.95fr) minmax(310px,1.8fr) 72px 92px 112px 92px 38px!important;gap:8px!important;}
 #containerPecasOS > div:has(.peca-codigo){grid-template-columns:120px minmax(300px,1fr) 64px 110px 92px 38px!important;gap:8px!important;}
 .os-totals-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:12px 0 4px;}
@@ -338,7 +345,7 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
   .content{padding: 16px;}
   .kpi-grid{grid-template-columns:1fr 1fr;}
   .dre-grid{grid-template-columns:1fr;}
-  .form-row.cols-2, .form-row.cols-3 { grid-template-columns: 1fr !important; gap:10px; }
+  .form-row.cols-2, .form-row.cols-3, .form-row.cols-4 { grid-template-columns: 1fr !important; gap:10px; }
   .kanban-wrap{grid-template-columns:1fr; padding-right:0; overflow-x:hidden;}
   .k-col{min-width:100%; width:100%; max-height: none; margin-bottom:14px;}
   .k-col-body{max-height: 400px;}
@@ -550,6 +557,10 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
       <svg viewBox="0 0 16 16"><path d="M0 2.5A.5.5 0 0 1 .5 2H2a.5.5 0 0 1 .485.379L2.89 4H14.5a.5.5 0 0 1 .485.621l-1.5 6A.5.5 0 0 1 13 11H4a.5.5 0 0 1-.485-.379L1.61 3H.5a.5.5 0 0 1-.5-.5zM3.14 5l1.25 5h8.22l1.25-5H3.14zM5 13a1 1 0 1 0 0 2 1 1 0 0 0 0-2zm-2 1a2 2 0 1 1 4 0 2 2 0 0 1-4 0zm9-1a1 1 0 1 0 0 2 1 1 0 0 0 0-2zm-2 1a2 2 0 1 1 4 0 2 2 0 0 1-4 0z"/></svg>
       Estoque / NF
     </div>
+    <div class="nav-item" onclick="ir('vendas',this)">
+      <svg viewBox="0 0 16 16"><path d="M2 2h12v2H2V2zm1 3h10l-.8 8.4A1.8 1.8 0 0 1 10.4 15H5.6a1.8 1.8 0 0 1-1.8-1.6L3 5zm3 2v5h1V7H6zm3 0v5h1V7H9z"/></svg>
+      Vendas / Autopeças
+    </div>
     <div class="nav-item" onclick="ir('financeiro',this)">
       <svg viewBox="0 0 16 16"><path d="M1 3a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1H1zm7 8a2 2 0 1 0 0-4 2 2 0 0 0 0 4z"/><path fill-rule="evenodd" d="M0 5a1 1 0 0 1 1-1h14a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1H1a1 1 0 0 1-1-1V5zm3 1h10v6H3V6z"/></svg>
       Financeiro / DRE
@@ -583,6 +594,10 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
     <div class="nav-item" onclick="ir('auditoria',this)">
       <svg viewBox="0 0 16 16"><path d="M8 1a2 2 0 0 1 2 2v4H6V3a2 2 0 0 1 2-2zm3 6V3a3 3 0 0 0-6 0v4a2 2 0 0 0-2 2v5a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z"/></svg>
       Auditoria
+    </div>
+    <div class="nav-item" onclick="ir('oficina',this)">
+      <svg viewBox="0 0 16 16"><path d="M8 0 1 3v5c0 4.5 3.05 7.16 7 8 3.95-.84 7-3.5 7-8V3L8 0zm0 1.1 6 2.57V8c0 3.8-2.45 6.1-6 6.95C4.45 14.1 2 11.8 2 8V3.67L8 1.1z"/><path d="M8 4a2 2 0 1 1 0 4 2 2 0 0 1 0-4zm0 5c2.2 0 4 1.12 4 2.5V12H4v-.5C4 10.12 5.8 9 8 9z"/></svg>
+      Oficina / Admins
     </div>
   </nav>
 
@@ -802,6 +817,38 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
       </div>
     </section>
 
+    <section class="section" id="s-vendas">
+      <div class="dre-grid">
+        <div class="dre-card entradas">
+          <div class="dre-label">VENDAS AUTOPEÇAS MÊS</div>
+          <div class="dre-val" id="vendKTotal">R$ 0,00</div>
+        </div>
+        <div class="dre-card saldo">
+          <div class="dre-label">MARGEM ESTIMADA</div>
+          <div class="dre-val" id="vendKMargem">R$ 0,00</div>
+        </div>
+        <div class="dre-card saidas">
+          <div class="dre-label">COMISSÕES GERADAS</div>
+          <div class="dre-val" id="vendKComissao">R$ 0,00</div>
+        </div>
+      </div>
+      <div class="j-card">
+        <div class="j-card-header">
+          <div>
+            <div class="j-card-title">VENDAS DE AUTOPEÇAS / BALCÃO</div>
+            <div style="font-family:var(--fm);font-size:0.62rem;color:var(--muted2);margin-top:4px;">Venda para terceiros, atacado e varejo com baixa de estoque, financeiro e comissão.</div>
+          </div>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+            <select class="j-select" id="filtroVendaCanal" onchange="renderVendasAutopecas()" style="width:140px;"><option value="">Todos</option><option value="varejo">Varejo</option><option value="atacado">Atacado</option></select>
+            <button class="btn-primary" onclick="prepVendaPeca();abrirModal('modalVendaPeca')">+ VENDA BALCÃO</button>
+          </div>
+        </div>
+        <div class="j-card-body" style="padding:0;overflow-x:auto;">
+          <table class="j-table"><thead><tr><th>Data</th><th>Cliente</th><th>Canal</th><th>Itens</th><th>Total</th><th>Vendedor</th><th>Status</th></tr></thead><tbody id="tbVendasAutopecas"></tbody></table>
+        </div>
+      </div>
+    </section>
+
     <section class="section" id="s-financeiro">
       <div class="dre-grid">
         <div class="dre-card entradas">
@@ -963,6 +1010,54 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
       </div>
     </section>
 
+    <section class="section" id="s-oficina">
+      <div class="j-card">
+        <div class="j-card-header">
+          <div>
+            <div class="j-card-title">ADMINISTRADORES DA OFICINA</div>
+            <div style="font-family:var(--fm);font-size:0.62rem;color:var(--muted2);margin-top:4px;">Cadastre socios ou gestores que podem entrar no Jarvis como admin desta oficina.</div>
+          </div>
+        </div>
+        <div class="j-card-body">
+          <div class="form-row c2">
+            <div class="form-group">
+              <label class="j-label">Login principal preservado</label>
+              <input class="j-input" id="ofAdminUsuarioPrincipal" readonly placeholder="usuario principal">
+            </div>
+            <div class="form-group">
+              <label class="j-label">Senha admin atual</label>
+              <input class="j-input" id="ofAdminSenhaInfo" readonly placeholder="usa a senha admin cadastrada">
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="j-label">E-mails admin adicionais</label>
+            <textarea class="j-input" id="ofAdminEmails" rows="5" placeholder="socio1@oficina.com&#10;socio2@oficina.com" style="resize:vertical;min-height:116px;font-family:var(--fm);"></textarea>
+            <div style="font-family:var(--fm);font-size:0.64rem;color:var(--muted2);margin-top:8px;line-height:1.45;">Um e-mail por linha, virgula ou ponto e virgula. Todos acessam como admin usando a mesma senha admin da oficina. O usuario principal antigo continua funcionando.</div>
+          </div>
+          <div style="border-top:1px solid var(--border);margin:16px 0 12px;padding-top:14px;">
+            <div style="font-family:var(--fm);font-size:0.72rem;color:var(--cyan);letter-spacing:1px;font-weight:800;margin-bottom:10px;">LOGOTIPO / TIMBRADO DOS ORCAMENTOS</div>
+            <div class="form-row c2">
+              <div class="form-group">
+                <label class="j-label">URL do logotipo da oficina</label>
+                <input class="j-input" id="ofLogoUrl" placeholder="https://res.cloudinary.com/.../logo.png">
+              </div>
+              <div class="form-group">
+                <label class="j-label">Enviar logotipo para Cloudinary</label>
+                <input class="j-input" type="file" id="ofLogoFile" accept="image/*,.png,.jpg,.jpeg,.webp">
+              </div>
+            </div>
+            <button class="btn-ghost" type="button" onclick="uploadLogoOficinaJarvis()" style="width:100%;margin-top:6px;">ENVIAR LOGOTIPO PARA CLOUDINARY</button>
+            <div style="font-family:var(--fm);font-size:0.64rem;color:var(--muted2);margin-top:8px;line-height:1.45;">Este logo aparece no timbrado do PDF/orcamento e na exportacao PMSP quando houver imagem cadastrada.</div>
+          </div>
+          <div id="ofAdminStatus" style="display:none;margin:10px 0;padding:10px;border:1px solid var(--border);border-radius:4px;font-family:var(--fm);font-size:0.68rem;"></div>
+          <div style="display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap;">
+            <button class="btn-ghost" type="button" onclick="renderAdminsOficina()">RECARREGAR</button>
+            <button class="btn-primary" type="button" onclick="salvarAdminsOficina()">SALVAR ADMINS / TIMBRADO</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
   </div>
 </div>
 </div>
@@ -1116,6 +1211,7 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
         <div>Peça / Produto</div><div>Qtd</div><div>Custo(R$)</div><div>Venda(R$)</div><div>Del</div>
       </div>
       <div id="containerPecasOS" style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px;"></div>
+      <div id="cotacaoPecasOSSlot"></div>
       
       <div style="display:flex;justify-content:flex-end;align-items:center;gap:20px;padding:14px;background:rgba(0,255,136,0.05);border-radius:3px;border:1px dashed rgba(0,255,136,0.2);">
         <span style="font-family:var(--fm);font-size:0.7rem;color:var(--muted);">TOTAL DA O.S.:</span>
@@ -1534,6 +1630,37 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
 </div>
 </div>
 
+<div class="overlay" id="modalVendaPeca">
+<div class="modal" style="max-width:980px;width:96vw;">
+  <div class="modal-head"><div class="modal-title">VENDA DE AUTOPEÇAS</div><button class="modal-close" onclick="fecharModal('modalVendaPeca')">✕</button></div>
+  <div class="modal-body">
+    <input type="hidden" id="vendaPecaId">
+    <div class="form-row cols-3">
+      <div class="form-group"><label class="j-label">Cliente / comprador</label><input class="j-input" id="vendaClienteNome" placeholder="Nome, oficina ou consumidor final"></div>
+      <div class="form-group"><label class="j-label">CPF/CNPJ</label><input class="j-input" id="vendaClienteDoc" placeholder="Opcional"></div>
+      <div class="form-group"><label class="j-label">Telefone / WhatsApp</label><input class="j-input" id="vendaClienteWpp" placeholder="Opcional"></div>
+    </div>
+    <div class="form-row cols-4">
+      <div class="form-group"><label class="j-label">Canal</label><select class="j-select" id="vendaCanal"><option value="varejo">Varejo</option><option value="atacado">Atacado</option></select></div>
+      <div class="form-group"><label class="j-label">Vendedor / responsável</label><select class="j-select" id="vendaVendedor"><option value="">Sem vendedor</option></select></div>
+      <div class="form-group"><label class="j-label">Pagamento</label><select class="j-select" id="vendaPgto"><option>PIX</option><option>Dinheiro</option><option>Cartão Débito</option><option>Cartão Crédito</option><option>Boleto</option><option>Transferência</option></select></div>
+      <div class="form-group"><label class="j-label">Status financeiro</label><select class="j-select" id="vendaStatus"><option value="Pago">Pago</option><option value="Pendente">Pendente</option></select></div>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin:12px 0;">
+      <div style="font-family:var(--fm);font-size:0.68rem;color:var(--muted);letter-spacing:1px;">ITENS DA VENDA</div>
+      <button class="btn-ghost" type="button" onclick="adicionarItemVendaPeca()">+ ITEM</button>
+    </div>
+    <div id="vendaItens" style="display:flex;flex-direction:column;gap:8px;"></div>
+    <div class="form-row cols-3" style="margin-top:14px;">
+      <div class="form-group"><label class="j-label">Desconto (R$)</label><input type="number" step="0.01" class="j-input" id="vendaDesconto" value="0" oninput="calcVendaPecaTotal()"></div>
+      <div class="form-group"><label class="j-label">Observação</label><input class="j-input" id="vendaObs" placeholder="Ex: entrega, garantia, condição especial"></div>
+      <div class="form-group"><label class="j-label">Total líquido</label><div class="j-input" id="vendaTotal" style="font-weight:800;color:var(--success);">R$ 0,00</div></div>
+    </div>
+  </div>
+  <div class="modal-foot"><button class="btn-ghost" onclick="fecharModal('modalVendaPeca')">CANCELAR</button><button class="btn-primary" onclick="salvarVendaPeca()">REGISTRAR VENDA</button></div>
+</div>
+</div>
+
 <div class="overlay" id="modalNF">
 <div class="modal" style="max-width:1180px;width:96vw;">
   <div class="modal-head"><div class="modal-title">ENTRADA DE NF / COMPRA</div><button class="modal-close" onclick="fecharModal('modalNF')">✕</button></div>
@@ -1629,9 +1756,10 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
         </select>
       </div>
     </div>
-    <div class="form-row cols-3">
+    <div class="form-row cols-4">
       <div class="form-group"><label class="j-label">% Com. Mão de Obra</label><input type="number" step="0.1" class="j-input" id="funcComissaoServico" placeholder="0" min="0" max="100"></div>
       <div class="form-group"><label class="j-label">% Com. Peças</label><input type="number" step="0.1" class="j-input" id="funcComissaoPeca" placeholder="0" min="0" max="100"></div>
+      <div class="form-group"><label class="j-label">% Com. Vendas</label><input type="number" step="0.1" class="j-input" id="funcComissaoVenda" placeholder="0" min="0" max="100"></div>
       <div class="form-group"><label class="j-label">WhatsApp</label><input type="tel" class="j-input" id="funcWpp" placeholder="17999999999"></div>
     </div>
     <div style="border-top:1px solid var(--border);padding-top:14px;margin-top:4px;">
@@ -1775,11 +1903,13 @@ const $v = id => $(id) ? $(id).value.trim() : '';
 J.tid = sessionStorage.getItem('j_tid');
 J.role = sessionStorage.getItem('j_role');
 J.nome = sessionStorage.getItem('j_nome');
+J.adminEmail = sessionStorage.getItem('j_admin_email') || '';
 J.tnome = sessionStorage.getItem('j_tnome');
 J.gemini = sessionStorage.getItem('j_gemini');
 J.nicho = sessionStorage.getItem('j_nicho') || 'carros';
 J.cloudName = sessionStorage.getItem('j_cloud_name') || 'dmuvm1o6m';
 J.cloudPreset = sessionStorage.getItem('j_cloud_preset') || 'evolution';
+try { J.oficina = JSON.parse(sessionStorage.getItem('j_oficina') || '{}') || {}; } catch(e) { J.oficina = {}; }
 
 if(!J.tid) window.location.replace('index.html');
 
@@ -1790,6 +1920,7 @@ window.db = db;
 // ESTADO IN-MEMORY
 J.os = []; J.clientes = []; J.veiculos = []; J.estoque = [];
 J.financeiro = []; J.equipe = []; J.fornecedores = [];
+J.vendasAutopecas = [];
 J.agendamentos = []; J.mensagens = []; J.auditoria = [];
 J.chatAtivo = null;
 
@@ -1805,7 +1936,7 @@ document.addEventListener('DOMContentLoaded', () => {
   if(typeof window.escutarOS === 'function') window.escutarOS(); 
   window.escutarClientes(); window.escutarVeiculos();
   window.escutarEstoque(); window.escutarFinanceiro(); window.escutarEquipe();
-  window.escutarFornecedores(); window.escutarMensagens(); window.escutarAgendamentos();
+  window.escutarFornecedores(); window.escutarVendasAutopecas(); window.escutarMensagens(); window.escutarAgendamentos();
   window.escutarAuditoria(); window.escutarChatEquipe();
 
   // ═══════════════════════════════════════════════════════════════════
@@ -1856,6 +1987,9 @@ document.addEventListener('DOMContentLoaded', () => {
   db.collection('oficinas').doc(J.tid).onSnapshot(doc => {
     if (doc.exists) {
       const ofi = doc.data();
+      J.oficina = { id: doc.id, ...ofi };
+      try { sessionStorage.setItem('j_oficina', JSON.stringify(J.oficina)); } catch(e) {}
+      renderAdminsOficina(J.oficina);
       const mods = ofi.modulos || {};
 
       // ═══════════════════════════════════════════════════════════════
@@ -1888,6 +2022,7 @@ document.addEventListener('DOMContentLoaded', () => {
       toggleMenu('kanban', mods.os !== false);
       toggleMenu('clientes', mods.crm !== false);
       toggleMenu('estoque', mods.estoque !== false);
+      toggleMenu('vendas', mods.autoPecas === true);
       toggleMenu('financeiro', mods.financeiro !== false);
       toggleMenu('agenda', mods.agenda !== false);
       toggleMenu('equipe', mods.rh !== false);
@@ -1910,8 +2045,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 });
-const sectionMap = { dashboard:'s-dashboard', agenda:'s-agenda', kanban:'s-kanban', clientes:'s-clientes', estoque:'s-estoque', financeiro:'s-financeiro', equipe:'s-equipe', chat:'s-chat', chatequipe:'s-chatequipe', ia:'s-ia', tabelatempa:'s-tabelatempa', auditoria:'s-auditoria' };
-const titleMap = { dashboard:'DASHBOARD', agenda:'AGENDA', kanban:'PÁTIO / O.S.', clientes:'CLIENTES & VEÍCULOS', estoque:'ESTOQUE / NF', financeiro:'FINANCEIRO / DRE', equipe:'EQUIPE & RH', chat:'CRM CHAT', chatequipe:'CHAT EQUIPE', ia:'thIAguinho IA', tabelatempa:'TABELA TEMPÁRIA', auditoria:'AUDITORIA' };
+const sectionMap = { dashboard:'s-dashboard', agenda:'s-agenda', kanban:'s-kanban', clientes:'s-clientes', estoque:'s-estoque', vendas:'s-vendas', financeiro:'s-financeiro', equipe:'s-equipe', chat:'s-chat', chatequipe:'s-chatequipe', ia:'s-ia', tabelatempa:'s-tabelatempa', auditoria:'s-auditoria', oficina:'s-oficina' };
+const titleMap = { dashboard:'DASHBOARD', agenda:'AGENDA', kanban:'PÁTIO / O.S.', clientes:'CLIENTES & VEÍCULOS', estoque:'ESTOQUE / NF', vendas:'VENDAS / AUTOPEÇAS', financeiro:'FINANCEIRO / DRE', equipe:'EQUIPE & RH', chat:'CRM CHAT', chatequipe:'CHAT EQUIPE', ia:'thIAguinho IA', tabelatempa:'TABELA TEMPÁRIA', auditoria:'AUDITORIA', oficina:'OFICINA / ADMINS' };
 
 function ir(key, el) {
   // CORREÇÃO 3: bloqueia navegação para módulo desabilitado
@@ -1927,6 +2062,125 @@ function ir(key, el) {
 }
 
 function sair() { sessionStorage.clear(); window.location.href='index.html'; }
+
+function podeGerenciarAdminsOficina(){
+  const role = String(J.role || '').toLowerCase();
+  return ['admin','gestor','gerente','superadmin','dono','proprietario','owner'].includes(role);
+}
+
+function normalizarEmailsAdminOficina(raw){
+  const invalidos = [];
+  const emails = [...new Set(String(raw || '')
+    .split(/[\n,;]+/)
+    .map(v => v.trim().toLowerCase())
+    .filter(Boolean)
+    .filter(v => {
+      const ok = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
+      if(!ok) invalidos.push(v);
+      return ok;
+    }))];
+  return { emails, invalidos };
+}
+
+function emailsAdminOficinaTexto(oficina){
+  const src = oficina?.adminEmails || oficina?.emailsAdmin || oficina?.adminsEmails || [];
+  if(Array.isArray(src)) return src.join('\n');
+  return String(src || '').split(/[\n,;]+/).map(v => v.trim()).filter(Boolean).join('\n');
+}
+
+function setOfAdminStatus(msg, tipo='ok'){
+  const el = $('ofAdminStatus');
+  if(!el) return;
+  if(!msg){ el.style.display='none'; el.textContent=''; return; }
+  const cor = tipo === 'err' ? 'var(--danger)' : tipo === 'warn' ? 'var(--warn)' : 'var(--success)';
+  el.style.display = 'block';
+  el.style.color = cor;
+  el.style.borderColor = cor;
+  el.textContent = msg;
+}
+
+function renderAdminsOficina(oficina = J.oficina){
+  if(!oficina) return;
+  if($('ofAdminUsuarioPrincipal')) $('ofAdminUsuarioPrincipal').value = oficina.usuario || '';
+  if($('ofAdminSenhaInfo')) $('ofAdminSenhaInfo').value = oficina.senha ? 'Senha admin cadastrada' : 'Senha admin nao cadastrada';
+  if($('ofAdminEmails')) $('ofAdminEmails').value = emailsAdminOficinaTexto(oficina);
+  if($('ofLogoUrl')) $('ofLogoUrl').value = oficina.logoUrl || oficina.logotipoUrl || oficina.logo || oficina.logotipo || oficina.logoOficinaUrl || oficina.timbradoLogoUrl || '';
+  const pode = podeGerenciarAdminsOficina();
+  if($('ofAdminEmails')) $('ofAdminEmails').disabled = !pode;
+  if($('ofLogoUrl')) $('ofLogoUrl').disabled = !pode;
+  if($('ofLogoFile')) $('ofLogoFile').disabled = !pode;
+  setOfAdminStatus(pode ? '' : 'Seu perfil nao pode alterar administradores da oficina.', 'warn');
+}
+
+async function salvarAdminsOficina(){
+  if(!podeGerenciarAdminsOficina()){
+    setOfAdminStatus('Apenas admin/gestor pode alterar administradores da oficina.', 'err');
+    toast('Apenas admin/gestor pode alterar administradores da oficina.', 'warn');
+    return;
+  }
+  const parsed = normalizarEmailsAdminOficina($v('ofAdminEmails'));
+  if(parsed.invalidos.length){
+    setOfAdminStatus('E-mail invalido: ' + parsed.invalidos[0], 'err');
+    toast('E-mail invalido: ' + parsed.invalidos[0], 'warn');
+    return;
+  }
+  const antes = J.oficina || {};
+  const payload = {
+    adminEmails: parsed.emails,
+    emailsAdmin: parsed.emails,
+    adminsEmails: parsed.emails,
+    logoUrl: $v('ofLogoUrl'),
+    logotipoUrl: $v('ofLogoUrl'),
+    logo: $v('ofLogoUrl'),
+    logotipo: $v('ofLogoUrl'),
+    timbrado: { ...(antes.timbrado || {}), logoUrl: $v('ofLogoUrl'), atualizadoEm: new Date().toISOString() },
+    identidadeVisual: { ...(antes.identidadeVisual || {}), logoUrl: $v('ofLogoUrl'), atualizadoEm: new Date().toISOString() },
+    adminEmailsAtualizadoPor: J.nome || '',
+    adminEmailsAtualizadoEm: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  };
+  try{
+    await db.collection('oficinas').doc(J.tid).update(payload);
+    try{ await db.collection('tenants').doc(J.tid).update(payload); }catch(e){}
+    await audit('OFICINA', 'Atualizou admins/timbrado da oficina', {antes: {admins: emailsAdminOficinaTexto(antes), logoUrl: antes.logoUrl || antes.logotipoUrl || ''}, depois: {admins: parsed.emails, logoUrl: $v('ofLogoUrl')}});
+    setOfAdminStatus('Administradores e timbrado atualizados. O proximo PDF/orcamento usara o logotipo cadastrado.', 'ok');
+    toast('Admins/timbrado da oficina atualizados');
+  }catch(e){
+    console.error(e);
+    setOfAdminStatus('Erro ao salvar admins: ' + e.message, 'err');
+    toast('Erro ao salvar admins: ' + e.message, 'err');
+  }
+}
+
+async function uploadLogoOficinaJarvis(){
+  if(!podeGerenciarAdminsOficina()){
+    toast('Apenas admin/gestor pode enviar logotipo.', 'warn');
+    return;
+  }
+  const file = $('ofLogoFile')?.files?.[0];
+  if(!file){ toast('Selecione uma imagem do logotipo', 'warn'); return; }
+  const cloud = J.oficina?.apiKeys?.cloudName || J.cloudName || 'dmuvm1o6m';
+  const preset = J.oficina?.apiKeys?.cloudPreset || J.cloudPreset || 'evolution';
+  if(!cloud || !preset){ toast('Cloudinary nao configurado para esta oficina.', 'warn'); return; }
+  try{
+    toast('Enviando logotipo para Cloudinary...', 'info');
+    const fd = new FormData();
+    fd.append('file', file);
+    fd.append('upload_preset', preset);
+    fd.append('folder', 'thiaguinho-logotipos');
+    fd.append('context', 'tipo=logotipo_oficina|tenant=' + (J.tid || 'oficina'));
+    const resp = await fetch(`https://api.cloudinary.com/v1_1/${cloud}/image/upload`, { method:'POST', body:fd });
+    const json = await resp.json();
+    if(!resp.ok || !json.secure_url) throw new Error(json.error?.message || 'Cloudinary nao retornou URL');
+    if($('ofLogoUrl')) $('ofLogoUrl').value = json.secure_url;
+    setOfAdminStatus('Logotipo enviado. Clique em SALVAR ADMINS / TIMBRADO para gravar na oficina.', 'ok');
+    toast('Logotipo enviado');
+  }catch(e){
+    console.error(e);
+    setOfAdminStatus('Erro ao enviar logotipo: ' + e.message, 'err');
+    toast('Erro ao enviar logotipo: ' + e.message, 'err');
+  }
+}
 function abrirModal(id) { $(id).classList.add('open'); }
 function fecharModal(id) { $(id).classList.remove('open'); }
 
@@ -2097,6 +2351,13 @@ window.escutarFornecedores = function() {
     window.renderFornecedores(); window.popularSelects();
   });
 }
+window.escutarVendasAutopecas = function() {
+  if(!J.tid) return;
+  db.collection('vendas_pecas').where('tenantId','==',J.tid).onSnapshot(snap => {
+    J.vendasAutopecas = snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(b.data||b.createdAt||'').localeCompare(a.data||a.createdAt||''));
+    window.renderVendasAutopecas();
+  }, err => console.warn('[vendas_pecas]', err.message));
+}
 window.escutarMensagens = function() {
   db.collection('mensagens').where('tenantId','==',J.tid).onSnapshot(snap => {
     J.mensagens = snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(a.ts||0)-(b.ts||0));
@@ -2210,6 +2471,7 @@ window.popularSelects = function() {
 
   const mOpts = '<option value="">Não atribuído</option>' + J.equipe.map(f=>`<option value="${f.id}">${f.nome} (${f.cargo||''})</option>`).join('');
   ['osMec','agdMec'].forEach(id => { if($(id)) $(id).innerHTML = mOpts; });
+  if($('vendaVendedor')) $('vendaVendedor').innerHTML = '<option value="">Sem vendedor</option>' + J.equipe.map(f=>`<option value="${f.id}">${f.nome} (${f.cargo||''})</option>`).join('');
 
   if($('nfFornec')) $('nfFornec').innerHTML = '<option value="">Selecione...</option>' + J.fornecedores.map(f=>`<option value="${f.id}">${f.nome}</option>`).join('');
   
@@ -2650,6 +2912,121 @@ window.renderEstoque = function() {
   }).join('') || '<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:20px;">Nenhum item</td></tr>';
 }
 
+function vendaModuloLiberado(canal){
+  const mods = J.oficina?.modulos || {};
+  if(mods.autoPecas !== true) return false;
+  if(canal === 'atacado' && mods.atacado !== true) return false;
+  if(canal === 'varejo' && mods.varejo === false) return false;
+  return true;
+}
+function optsEstoqueVenda(){
+  return '<option value="">Selecione a peça...</option>' + (J.estoque||[]).map(p=>`<option value="${p.id}">${p.codigo?`${p.codigo} - `:''}${p.desc} (qtd ${p.qtd||0})</option>`).join('');
+}
+window.prepVendaPeca = function(){
+  ['vendaPecaId','vendaClienteNome','vendaClienteDoc','vendaClienteWpp','vendaObs'].forEach(f=>{if($(f))$(f).value='';});
+  const mods = J.oficina?.modulos || {};
+  if($('vendaCanal')) $('vendaCanal').value = mods.varejo === false && mods.atacado === true ? 'atacado' : 'varejo';
+  if($('vendaPgto')) $('vendaPgto').value='PIX';
+  if($('vendaStatus')) $('vendaStatus').value='Pago';
+  if($('vendaDesconto')) $('vendaDesconto').value='0';
+  if($('vendaItens')) $('vendaItens').innerHTML='';
+  window.popularSelects();
+  adicionarItemVendaPeca();
+  calcVendaPecaTotal();
+}
+window.adicionarItemVendaPeca = function(item){
+  const box = $('vendaItens'); if(!box) return;
+  const row = document.createElement('div');
+  row.className = 'venda-peca-row';
+  row.style.cssText = 'display:grid;grid-template-columns:minmax(220px,1fr) 70px 100px 100px 32px;gap:8px;align-items:center;';
+  row.innerHTML = `
+    <select class="j-select venda-item-peca" onchange="onVendaPecaSelect(this)">${optsEstoqueVenda()}</select>
+    <input type="number" class="j-input venda-item-qtd" value="${item?.qtd||1}" min="1" oninput="calcVendaPecaTotal()">
+    <input type="number" step="0.01" class="j-input venda-item-unit" value="${item?.unit||0}" oninput="calcVendaPecaTotal()">
+    <div class="j-input venda-item-total" style="font-family:var(--fm);font-weight:700;">R$ 0,00</div>
+    <button type="button" class="btn-danger" onclick="this.parentElement.remove();calcVendaPecaTotal()">×</button>
+  `;
+  box.appendChild(row);
+  if(item?.estoqueId){ row.querySelector('.venda-item-peca').value = item.estoqueId; onVendaPecaSelect(row.querySelector('.venda-item-peca'), true); }
+  calcVendaPecaTotal();
+}
+window.onVendaPecaSelect = function(sel, manterPreco){
+  const row = sel.closest('.venda-peca-row');
+  const p = J.estoque.find(x=>x.id===sel.value);
+  if(p && !manterPreco) row.querySelector('.venda-item-unit').value = parseFloat(p.venda||0).toFixed(2);
+  calcVendaPecaTotal();
+}
+window.calcVendaPecaTotal = function(){
+  let bruto = 0;
+  document.querySelectorAll('.venda-peca-row').forEach(row=>{
+    const qtd = parseFloat(row.querySelector('.venda-item-qtd')?.value || 0);
+    const unit = parseFloat(row.querySelector('.venda-item-unit')?.value || 0);
+    const total = qtd * unit;
+    bruto += total;
+    const el = row.querySelector('.venda-item-total'); if(el) el.textContent = moeda(total);
+  });
+  const desc = parseFloat($v('vendaDesconto')||0);
+  const liquido = Math.max(0, bruto - desc);
+  if($('vendaTotal')) $('vendaTotal').textContent = moeda(liquido);
+  return {bruto, desconto:desc, liquido};
+}
+function coletarItensVendaPeca(){
+  const itens = [];
+  document.querySelectorAll('.venda-peca-row').forEach(row=>{
+    const estoqueId = row.querySelector('.venda-item-peca')?.value || '';
+    const p = J.estoque.find(x=>x.id===estoqueId);
+    const qtd = parseFloat(row.querySelector('.venda-item-qtd')?.value || 0);
+    const unit = parseFloat(row.querySelector('.venda-item-unit')?.value || 0);
+    if(p && qtd > 0) itens.push({estoqueId, codigo:p.codigo||'', desc:p.desc||'', qtd, unit, total:qtd*unit, custoUnit:parseFloat(p.custo||0), estoqueAntes:parseFloat(p.qtd||0)});
+  });
+  return itens;
+}
+window.salvarVendaPeca = async function(){
+  const canal = $v('vendaCanal') || 'varejo';
+  if(!vendaModuloLiberado(canal)){ toast('Módulo de venda '+canal+' não liberado para esta oficina.', 'warn'); return; }
+  const itens = coletarItensVendaPeca();
+  if(!itens.length){ toast('Inclua ao menos uma peça válida.', 'warn'); return; }
+  const estoqueInsuf = itens.find(it => it.qtd > it.estoqueAntes);
+  if(estoqueInsuf && !confirm(`Estoque insuficiente para ${estoqueInsuf.desc}. Continuar mesmo assim?`)) return;
+  const totais = calcVendaPecaTotal();
+  const vendedor = J.equipe.find(f=>f.id===$v('vendaVendedor')) || null;
+  const mods = J.oficina?.modulos || {};
+  const pctComissao = vendedor ? parseFloat(vendedor.comissaoVenda || vendedor.comissaoPeca || 0) : 0;
+  const valorComissao = (mods.comissaoVendas !== false && pctComissao > 0) ? +(totais.liquido * pctComissao / 100).toFixed(2) : 0;
+  const vendaRef = db.collection('vendas_pecas').doc();
+  const hoje = dataLocalISOJ();
+  const payload = {tenantId:J.tid,tipo:'autopecas',canal,clienteNome:$v('vendaClienteNome')||'Consumidor final',clienteDoc:$v('vendaClienteDoc'),clienteWpp:$v('vendaClienteWpp'),itens,bruto:totais.bruto,desconto:totais.desconto,total:totais.liquido,pagamento:$v('vendaPgto'),status:$v('vendaStatus'),vendedorId:vendedor?.id||'',vendedorNome:vendedor?.nome||'',comissaoPercentual:pctComissao,comissaoValor:valorComissao,obs:$v('vendaObs'),data:hoje,createdAt:new Date().toISOString()};
+  const batch = db.batch();
+  batch.set(vendaRef, payload);
+  itens.forEach(it=>batch.update(db.collection('estoqueItems').doc(it.estoqueId), {qtd:it.estoqueAntes-it.qtd, updatedAt:new Date().toISOString()}));
+  if(mods.financeiro !== false){
+    batch.set(db.collection('financeiro').doc(), {tenantId:J.tid,tipo:'Entrada',desc:`Venda autopeças ${canal} - ${payload.clienteNome}`,valor:payload.total,pgto:payload.pagamento,venc:hoje,status:payload.status,nota:`Venda ${vendaRef.id}`,vinculo:'VENDA_'+vendaRef.id,categoria:'venda_autopecas',vendaId:vendaRef.id,createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()});
+    if(valorComissao > 0) batch.set(db.collection('financeiro').doc(), {tenantId:J.tid,tipo:'Saída',desc:`Comissão venda autopeças - ${vendedor.nome}`,valor:valorComissao,pgto:'Comissão',venc:hoje,status:'Pendente',nota:`${pctComissao}% sobre venda ${vendaRef.id}`,vinculo:'E_'+vendedor.id,isComissao:true,mecId:vendedor.id,vendedorId:vendedor.id,categoria:'comissao_venda_autopecas',vendaId:vendaRef.id,createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()});
+  }
+  await batch.commit();
+  toast('Venda registrada com baixa de estoque e financeiro.');
+  fecharModal('modalVendaPeca');
+  audit('VENDAS_AUTOPECAS', `Venda ${canal} ${moeda(payload.total)} para ${payload.clienteNome}`);
+}
+window.renderVendasAutopecas = function(){
+  const tb = $('tbVendasAutopecas'); if(!tb) return;
+  const filtro = $v('filtroVendaCanal');
+  const mes = dataLocalISOJ().slice(0,7);
+  const base = (J.vendasAutopecas||[]).filter(v=>!filtro || v.canal===filtro);
+  const mesAtual = (J.vendasAutopecas||[]).filter(v=>String(v.data||v.createdAt||'').slice(0,7)===mes);
+  const total = mesAtual.reduce((s,v)=>s+parseFloat(v.total||0),0);
+  const margem = mesAtual.reduce((s,v)=>s+(v.itens||[]).reduce((a,it)=>a+((parseFloat(it.unit||0)-parseFloat(it.custoUnit||0))*parseFloat(it.qtd||0)),0)-parseFloat(v.desconto||0),0);
+  const comissao = mesAtual.reduce((s,v)=>s+parseFloat(v.comissaoValor||0),0);
+  if($('vendKTotal')) $('vendKTotal').textContent = moeda(total);
+  if($('vendKMargem')) $('vendKMargem').textContent = moeda(margem);
+  if($('vendKComissao')) $('vendKComissao').textContent = moeda(comissao);
+  tb.innerHTML = base.map(v=>{
+    const itensTxt = (v.itens||[]).map(i=>`${i.qtd}x ${i.desc}`).join('<br>') || '-';
+    const st = v.status === 'Pago' ? 'pill-green' : 'pill-warn';
+    return `<tr><td style="font-family:var(--fm);font-size:0.72rem;color:var(--muted)">${dtBr(v.data||v.createdAt)}</td><td><strong>${v.clienteNome||'-'}</strong><br><small>${v.clienteDoc||''}</small></td><td><span class="pill pill-cyan">${(v.canal||'varejo').toUpperCase()}</span></td><td style="font-size:0.78rem">${itensTxt}</td><td style="font-family:var(--fm);font-weight:700;color:var(--success)">${moeda(v.total)}</td><td>${v.vendedorNome||'-'}${v.comissaoValor?`<br><small style="color:var(--warn)">Com. ${moeda(v.comissaoValor)}</small>`:''}</td><td><span class="pill ${st}">${v.status||'Pendente'}</span></td></tr>`;
+  }).join('') || '<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:20px;">Nenhuma venda registrada</td></tr>';
+}
+
 window.salvarFornec = async function() {
   if(!$v('fornecNome')) return;
   const p={tenantId:J.tid,nome:$v('fornecNome'),segmento:$v('fornecSeg'),wpp:$v('fornecWpp'),createdAt:new Date().toISOString()};
@@ -2663,7 +3040,7 @@ window.renderFornecedores = function() {
 
 // EQUIPE
 window.prepFunc = function(mode, id=null) {
-  ['funcId','funcNome','funcWpp','funcComissaoServico','funcComissaoPeca','funcUser','funcPass'].forEach(f=>{if($(f)) $(f).value='';});
+  ['funcId','funcNome','funcWpp','funcComissaoServico','funcComissaoPeca','funcComissaoVenda','funcUser','funcPass'].forEach(f=>{if($(f)) $(f).value='';});
   $('funcCargo').value='mecanico';
   if(mode==='edit'&&id){
     const f=J.equipe.find(x=>x.id===id); if(!f) return;
@@ -2671,6 +3048,7 @@ window.prepFunc = function(mode, id=null) {
     $('funcCargo').value=f.cargo||'mecanico'; 
     $('funcComissaoServico').value=f.comissaoServico||f.comissao||0;
     $('funcComissaoPeca').value=f.comissaoPeca||0;
+    if($('funcComissaoVenda')) $('funcComissaoVenda').value=f.comissaoVenda||f.comissaoPeca||0;
     $('funcUser').value=f.usuario||''; $('funcPass').value=f.senha||'';
   }
 }
@@ -2679,6 +3057,7 @@ window.salvarFunc = async function() {
   const p={tenantId:J.tid,nome:$v('funcNome'),wpp:$v('funcWpp'),cargo:$v('funcCargo'),
            comissaoServico:parseFloat($v('funcComissaoServico')||0),
            comissaoPeca:parseFloat($v('funcComissaoPeca')||0),
+           comissaoVenda:parseFloat($v('funcComissaoVenda')||0),
            usuario:$v('funcUser'),senha:$v('funcPass'),updatedAt:new Date().toISOString()};
   const id=$v('funcId');
   if(id) await db.collection('funcionarios').doc(id).update(p); else { p.createdAt=new Date().toISOString(); await db.collection('funcionarios').add(p); }
@@ -2687,7 +3066,7 @@ window.salvarFunc = async function() {
 window.renderEquipe = function() {
   if(!$('tbEquipe')) return;
   $('tbEquipe').innerHTML = J.equipe.map(f=>`<tr><td><strong>${f.nome}</strong></td><td><span class="pill pill-cyan">${f.cargo.toUpperCase()}</span></td><td style="font-family:var(--fm)">${f.usuario}</td>
-    <td><span style="font-family:var(--fm);font-size:0.75rem;color:var(--success)">MO: ${f.comissaoServico||f.comissao||0}%<br>PC: ${f.comissaoPeca||0}%</span></td>
+    <td><span style="font-family:var(--fm);font-size:0.75rem;color:var(--success)">MO: ${f.comissaoServico||f.comissao||0}%<br>PC: ${f.comissaoPeca||0}%<br>VD: ${f.comissaoVenda||0}%</span></td>
     <td><button class="btn-ghost" onclick="window.prepFunc('edit','${f.id}');abrirModal('modalFunc')">✏</button><button class="btn-danger" onclick="window.deletarFunc('${f.id}')">🗑</button></td></tr>`).join('') || '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:20px;">Nenhum colaborador</td></tr>';
 }
 window.deletarFunc = async function(id) { return window.excluirFuncionarioDef ? window.excluirFuncionarioDef(id) : false; }

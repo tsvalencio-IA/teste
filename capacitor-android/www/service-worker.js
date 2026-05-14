@@ -1,22 +1,22 @@
-/**
- * thIAguinho ERP — Service Worker
+﻿/**
+ * thIAguinho ERP â€” Service Worker
  *
  * Permite que o sistema funcione como PWA (Progressive Web App):
- *  • Cliente pode "instalar" o site como ícone na tela do celular
- *  • Funciona offline parcialmente (cache dos arquivos visitados)
- *  • Atualização automática quando volta online
+ *  â€¢ Cliente pode "instalar" o site como Ã­cone na tela do celular
+ *  â€¢ Funciona offline parcialmente (cache dos arquivos visitados)
+ *  â€¢ AtualizaÃ§Ã£o automÃ¡tica quando volta online
  *
- * Estratégia: Network First com fallback para Cache.
- * Isso garante que o cliente sempre vê a versão mais nova quando online,
- * mas continua tendo acesso ao último estado conhecido se cair internet.
+ * EstratÃ©gia: Network First com fallback para Cache.
+ * Isso garante que o cliente sempre vÃª a versÃ£o mais nova quando online,
+ * mas continua tendo acesso ao Ãºltimo estado conhecido se cair internet.
  *
- * Powered by thIAguinho Soluções Digitais
+ * Powered by thIAguinho SoluÃ§Ãµes Digitais
  */
-const CACHE_VERSION = 'thiaguinho-comercial-hardening-20260513-13';
+const CACHE_VERSION = 'thiaguinho-timbrado-20260514-19';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const RUNTIME_CACHE = `${CACHE_VERSION}-runtime`;
 
-// Arquivos críticos que pré-carregamos na instalação
+// Arquivos crÃ­ticos que prÃ©-carregamos na instalaÃ§Ã£o
 const PRECACHE_URLS_RAW = [
   './',
   './selecionar-perfil.html',
@@ -25,6 +25,7 @@ const PRECACHE_URLS_RAW = [
   './equipe.html',
   './cliente.html',
   './clienteOficial.html',
+  './c.html',
   './cotacao.html',
   './superadmin.html',
   './manifest.json',
@@ -62,12 +63,12 @@ const PRECACHE_URLS_RAW = [
 const SW_BASE = self.location.pathname.includes('/js/service-worker.js') ? '../' : './';
 const PRECACHE_URLS = PRECACHE_URLS_RAW.map(url => url === './' ? SW_BASE : SW_BASE + url.replace(/^\.\//, ''));
 
-// ── INSTALL: pré-carrega arquivos críticos ──
+// â”€â”€ INSTALL: prÃ©-carrega arquivos crÃ­ticos â”€â”€
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(STATIC_CACHE)
       .then((cache) => {
-        // addAll falha se UM arquivo falhar; usar add() individual + catch é mais robusto
+        // addAll falha se UM arquivo falhar; usar add() individual + catch Ã© mais robusto
         return Promise.all(
           PRECACHE_URLS.map(url =>
             cache.add(url).catch(err => console.warn('SW skip:', url, err.message))
@@ -78,7 +79,7 @@ self.addEventListener('install', (event) => {
   );
 });
 
-// ── ACTIVATE: limpa caches antigos ──
+// â”€â”€ ACTIVATE: limpa caches antigos â”€â”€
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys()
@@ -91,11 +92,11 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// ── FETCH: Network First, depois Cache ──
+// â”€â”€ FETCH: Network First, depois Cache â”€â”€
 self.addEventListener('fetch', (event) => {
   const { request } = event;
 
-  // Pula requisições que não são GET
+  // Pula requisiÃ§Ãµes que nÃ£o sÃ£o GET
   if (request.method !== 'GET') return;
 
   // Pula chamadas para Firebase/Cloudinary/Gemini (sempre online)
@@ -114,7 +115,7 @@ self.addEventListener('fetch', (event) => {
   event.respondWith(
     fetch(request)
       .then((response) => {
-        // Salva uma cópia no cache runtime para uso offline
+        // Salva uma cÃ³pia no cache runtime para uso offline
         if (response && response.status === 200 && response.type === 'basic') {
           const responseClone = response.clone();
           caches.open(RUNTIME_CACHE).then(cache => cache.put(request, responseClone));
@@ -134,4 +135,4 @@ self.addEventListener('fetch', (event) => {
   );
 });
 
-/* Powered by thIAguinho Soluções Digitais */
+/* Powered by thIAguinho SoluÃ§Ãµes Digitais */

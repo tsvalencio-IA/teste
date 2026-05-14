@@ -952,7 +952,9 @@ window.prepOS = function(mode, id = null) {
   if (typeof window.popularSelects === 'function') window.popularSelects();
 
   if (mode === 'add') { 
-      if(typeof window.adicionarServicoOS === 'function') window.adicionarServicoOS(); 
+      if(typeof window.adicionarServicoOS === 'function') window.adicionarServicoOS();
+      if(typeof window.adicionarPecaOS === 'function') window.adicionarPecaOS();
+      setTimeout(() => window.inicializarAutoLinhasOS?.(), 0);
   }
 
   if (mode === 'edit' && id) {
@@ -1427,6 +1429,127 @@ window.selecionarPecaOS = function(sel) {
   window.calcOSTotal();
 };
 
+function osRowsDiretas(containerId) {
+  const cont = document.getElementById(containerId);
+  if (!cont) return [];
+  return Array.from(cont.children || []).filter(row =>
+    row?.nodeType === 1 &&
+    !row.classList?.contains('cilia-peca-wrap') &&
+    !row.classList?.contains('os-auto-row-hint')
+  );
+}
+
+function osCampoTemValor(row, selector) {
+  const el = row?.querySelector?.(selector);
+  return !!String(el?.value || '').trim();
+}
+
+function osCampoDecimalPositivo(row, selector) {
+  const el = row?.querySelector?.(selector);
+  return numBR(el?.value || 0) > 0;
+}
+
+function osServicoLinhaPreenchida(row) {
+  if (!row) return false;
+  const secao = row.querySelector('.serv-secao-hora')?.value || '';
+  return osCampoTemValor(row, '.serv-desc') ||
+    osCampoDecimalPositivo(row, '.serv-tempo') ||
+    osCampoDecimalPositivo(row, '.serv-valor') ||
+    !!secao;
+}
+
+function osPecaLinhaPreenchida(row) {
+  if (!row) return false;
+  const sel = row.querySelector('.peca-sel');
+  const estoqueSelecionado = sel && sel.value && sel.value !== '__avulsa__';
+  return !!estoqueSelecionado ||
+    osCampoTemValor(row, '.peca-codigo') ||
+    osCampoTemValor(row, '.peca-desc-livre') ||
+    osCampoDecimalPositivo(row, '.peca-custo') ||
+    osCampoDecimalPositivo(row, '.peca-venda') ||
+    numBR(row.querySelector('.peca-qtd')?.value || 1) > 1;
+}
+
+function osAdicionarLinhaAutomatica(tipo) {
+  const containerId = tipo === 'servico' ? 'containerServicosOS' : 'containerPecasOS';
+  const cont = document.getElementById(containerId);
+  if (!cont || cont.dataset.autoRowLock === '1') return null;
+  cont.dataset.autoRowLock = '1';
+  try {
+    if (tipo === 'servico') window.adicionarServicoOS?.();
+    else window.adicionarPecaOS?.();
+    const rows = osRowsDiretas(containerId);
+    const nova = rows[rows.length - 1] || null;
+    if (nova) nova.dataset.autoLinhaOS = '1';
+    return nova;
+  } finally {
+    setTimeout(() => { if (cont) delete cont.dataset.autoRowLock; }, 80);
+  }
+}
+
+function osGarantirProximaLinha(tipo) {
+  const containerId = tipo === 'servico' ? 'containerServicosOS' : 'containerPecasOS';
+  const rows = osRowsDiretas(containerId);
+  if (!rows.length) return osAdicionarLinhaAutomatica(tipo);
+  const ultima = rows[rows.length - 1];
+  const preenchida = tipo === 'servico' ? osServicoLinhaPreenchida(ultima) : osPecaLinhaPreenchida(ultima);
+  if (preenchida) return osAdicionarLinhaAutomatica(tipo);
+  return null;
+}
+
+function osFocarProximaLinha(row, tipo) {
+  const containerId = tipo === 'servico' ? 'containerServicosOS' : 'containerPecasOS';
+  osGarantirProximaLinha(tipo);
+  setTimeout(() => {
+    const rows = osRowsDiretas(containerId);
+    const idx = rows.indexOf(row);
+    const next = rows[idx + 1];
+    if (!next) return;
+    const alvo = tipo === 'servico'
+      ? next.querySelector('.serv-desc')
+      : (next.querySelector('.peca-desc-livre') || next.querySelector('.peca-sel'));
+    alvo?.focus?.();
+    next.scrollIntoView?.({ block: 'nearest', behavior: 'smooth' });
+  }, 30);
+}
+
+window.inicializarAutoLinhasOS = function() {
+  const serv = document.getElementById('containerServicosOS');
+  const pec = document.getElementById('containerPecasOS');
+  if (serv && serv.dataset.autoRowsInit !== '1') {
+    serv.dataset.autoRowsInit = '1';
+    const onEdit = () => setTimeout(() => osGarantirProximaLinha('servico'), 0);
+    serv.addEventListener('input', onEdit);
+    serv.addEventListener('change', onEdit);
+    serv.addEventListener('keydown', ev => {
+      if (ev.key !== 'Enter' || ev.shiftKey || ev.ctrlKey || ev.altKey) return;
+      const alvo = ev.target;
+      if (!alvo?.matches?.('.serv-desc,.serv-tempo,.serv-valor,.serv-valor-hora')) return;
+      ev.preventDefault();
+      osFocarProximaLinha(alvo.closest('#containerServicosOS > div'), 'servico');
+    });
+  }
+  if (pec && pec.dataset.autoRowsInit !== '1') {
+    pec.dataset.autoRowsInit = '1';
+    const onEdit = () => setTimeout(() => osGarantirProximaLinha('peca'), 0);
+    pec.addEventListener('input', onEdit);
+    pec.addEventListener('change', onEdit);
+    pec.addEventListener('keydown', ev => {
+      if (ev.key !== 'Enter' || ev.shiftKey || ev.ctrlKey || ev.altKey) return;
+      const alvo = ev.target;
+      if (!alvo?.matches?.('.peca-codigo,.peca-desc-livre,.peca-qtd,.peca-custo,.peca-venda')) return;
+      ev.preventDefault();
+      osFocarProximaLinha(alvo.closest('#containerPecasOS > div'), 'peca');
+    });
+  }
+};
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', () => window.inicializarAutoLinhasOS?.());
+} else {
+  window.inicializarAutoLinhasOS?.();
+}
+
 window.renderResumoSecoesOS = function(resumoSecoes) {
     const el = $('osSecaoKpisOS');
     if (!el) return;
@@ -1589,6 +1712,7 @@ window.calcOSTotal = function() {
       total
     });
     window.renderResumoSecoesOS(resumoSecoesOS);
+    window.atualizarCotacaoPecasOrcamentoAtualOS?.();
 };
 
 window.verificarStatusOS = function() {
@@ -1702,14 +1826,16 @@ window.salvarOS = async function() {
     // Peça normal (estoque)
     const sel = row.querySelector('.peca-sel');
     const opt = sel?.options[sel.selectedIndex];
+    const estoqueId = sel?.value || '';
     const qtd = numBR(row.querySelector('.peca-qtd')?.value || 1) || 1;
     const venda = numBR(row.querySelector('.peca-venda')?.value || 0);
     const custo = numBR(row.querySelector('.peca-custo')?.value || 0);
+    if (!estoqueId && !venda && !custo) return;
     totalPecas += (qtd * venda);
 
     pecas.push({
-      estoqueId: sel?.value,
-      desc: opt?.dataset.desc || opt?.text || '',
+      estoqueId,
+      desc: estoqueId ? (opt?.dataset.desc || opt?.text || '') : '',
       qtd: qtd, custo: custo, venda: venda
     });
   });
@@ -2581,6 +2707,29 @@ window.gerarPDFOS = async function() {
     return '';
   };
   const upperPdf = (...values) => String(pickPdf(...values) || '').toUpperCase();
+  function dadoOficinaPdf(...keys) {
+    const fontes = [osAtual.dadosOficina, osAtual.oficinaDados, osAtual.oficina, J.oficina, J].filter(Boolean);
+    for (const fonte of fontes) {
+      for (const key of keys) {
+        const value = fonte && fonte[key];
+        if (value !== undefined && value !== null && String(value).trim() !== '') return value;
+      }
+    }
+    return '';
+  }
+  function enderecoOficinaPdf() {
+    return pickPdf(
+      dadoOficinaPdf('enderecoCompleto'),
+      [
+        dadoOficinaPdf('endereco', 'rua', 'logradouro'),
+        dadoOficinaPdf('numero', 'num'),
+        dadoOficinaPdf('bairro'),
+        dadoOficinaPdf('cidade', 'municipio'),
+        dadoOficinaPdf('uf'),
+        dadoOficinaPdf('cep')
+      ].filter(v => String(v || '').trim()).join(', ')
+    );
+  }
   const clientePdf = {
     nome: pickPdf(c.govUnidade, c.razaoSocial, c.nome, osAtual.cliente, $v('osCliente')),
     doc: pickPdf(c.doc, c.cnpj, c.cpf, osAtual.cpf, $v('osCpf')),
@@ -2597,7 +2746,16 @@ window.gerarPDFOS = async function() {
     patrimonio: pickPdf(v.patrimonio, v.patrimonioNumero, v.patrimonioId, osAtual.patrimonio, osAtual.patrimonioNumero),
     prefixo: upperPdf(v.prefixo, osAtual.prefixo)
   };
-  const oficinaNomePdf = String(pickPdf(J.nomeFantasia, J.tnome, J.razaoSocial, J.nome, 'OFICINA')).toUpperCase();
+  const oficinaNomePdf = String(pickPdf(dadoOficinaPdf('nomeFantasia', 'tnome', 'nome'), dadoOficinaPdf('razaoSocial', 'razao'), J.nomeFantasia, J.tnome, J.razaoSocial, J.nome, 'OFICINA')).toUpperCase();
+  const oficinaTimbradoPdf = {
+    nome: oficinaNomePdf,
+    cnpj: pickPdf(dadoOficinaPdf('cnpj', 'doc', 'documento')),
+    endereco: enderecoOficinaPdf(),
+    telefone: pickPdf(dadoOficinaPdf('telefone', 'celular', 'wpp', 'whatsapp')),
+    email: pickPdf(dadoOficinaPdf('email')),
+    site: pickPdf(dadoOficinaPdf('site', 'website')),
+    logoUrl: pickPdf(dadoOficinaPdf('logoUrl', 'logotipoUrl', 'logoOficinaUrl', 'logoOficina', 'timbradoLogoUrl', 'timbradoUrl', 'marcaUrl', 'imagemLogo', 'urlLogo', 'logo', 'logotipo'))
+  };
 
   function linhaTitulo(titulo) {
     if (y > ph - 30) { doc.addPage(); y = 12; }
@@ -2696,9 +2854,10 @@ window.gerarPDFOS = async function() {
   document.querySelectorAll('#containerPecasOS [data-peca-avulsa="1"], #containerPecasOS > div:not(.cilia-peca-wrap)').forEach(row => {
     const sel = row.querySelector('.peca-sel');
     const opt = sel?.options?.[sel.selectedIndex];
+    const estoqueId = sel?.value || '';
     const codigo = row.querySelector('.peca-codigo')?.value?.trim() || '';
     const descLivre = row.querySelector('.peca-desc-livre')?.value?.trim();
-    const desc = descLivre || opt?.dataset?.desc || opt?.text || '';
+    const desc = descLivre || (estoqueId ? (opt?.dataset?.desc || opt?.text || '') : '');
     const qtd = numBR(row.querySelector('.peca-qtd')?.value || 0) || 1;
     const unit = numBR(row.querySelector('.peca-venda')?.value || 0);
     const final = +(qtd * unit * (1 - descPeca)).toFixed(2);
@@ -2734,16 +2893,41 @@ window.gerarPDFOS = async function() {
 
   doc.setFillColor(255, 255, 255);
   doc.rect(0, 0, pw, ph, 'F');
+  const logoOficinaPDF = await carregarImagem(oficinaTimbradoPdf.logoUrl);
+  const headerLineY = 28;
   doc.setDrawColor(20, 45, 95);
   doc.setLineWidth(0.7);
-  doc.line(margem, 15, pw - margem, 15);
+  doc.line(margem, headerLineY, pw - margem, headerLineY);
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(13);
   doc.setTextColor(10, 25, 48);
-  doc.text(oficinaNomePdf, margem, 10);
+  let headerTextX = margem;
+  if (logoOficinaPDF) {
+    const logoBoxW = 24;
+    const logoBoxH = 16;
+    const ratio = Math.min(logoBoxW / logoOficinaPDF.w, logoBoxH / logoOficinaPDF.h);
+    const logoW = logoOficinaPDF.w * ratio;
+    const logoH = logoOficinaPDF.h * ratio;
+    doc.addImage(logoOficinaPDF.data, 'JPEG', margem, 7 + (logoBoxH - logoH) / 2, logoW, logoH);
+    headerTextX = margem + logoBoxW + 4;
+  }
+  doc.text(oficinaTimbradoPdf.nome, headerTextX, 10);
+  const linhasTimbradoPdf = [
+    [oficinaTimbradoPdf.cnpj ? 'CNPJ: ' + oficinaTimbradoPdf.cnpj : '', oficinaTimbradoPdf.telefone ? 'Tel/Whats: ' + oficinaTimbradoPdf.telefone : ''].filter(Boolean).join('  |  '),
+    oficinaTimbradoPdf.endereco,
+    [oficinaTimbradoPdf.email, oficinaTimbradoPdf.site].filter(Boolean).join('  |  ')
+  ].filter(Boolean);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(7);
+  doc.setTextColor(60, 72, 88);
+  linhasTimbradoPdf.slice(0, 3).forEach((linha, idx) => {
+    doc.text(doc.splitTextToSize(linha, pw - headerTextX - 70)[0] || '', headerTextX, 14 + idx * 4);
+  });
   doc.setFontSize(12);
-  doc.text('ORDEM DE SERVICO / LAUDO TECNICO', pw - margem, 10, { align: 'right' });
-  y = 22;
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(10, 25, 48);
+  doc.text('ORCAMENTO / ORDEM DE SERVICO', pw - margem, 10, { align: 'right' });
+  y = headerLineY + 6;
 
   doc.autoTable({
     startY: y,
@@ -3288,6 +3472,10 @@ window.renderCotacaoPecasAprovadasOS = function(os, aprovados, moedaFn) {
   if (!pecas.length) return '';
   const map = cotacoesOSMap(os);
   const moedaLocal = moedaFn || moedaOS;
+  const osIdSeguro = escOS(os?.id || '');
+  const avisoSalvar = os?.id
+    ? ''
+    : '<div style="font-family:var(--fm);font-size:.62rem;color:var(--warn);margin-bottom:8px;">Salve e continue a O.S. antes de enviar link publico ou gravar retornos no banco.</div>';
   const blocos = pecas.map(it => {
     const cot = map[it.key] || {};
     const opcoes = Array.isArray(cot.opcoes) && cot.opcoes.length ? cot.opcoes : [{}, {}, {}];
@@ -3300,9 +3488,9 @@ window.renderCotacaoPecasAprovadasOS = function(os, aprovados, moedaFn) {
           <label style="display:inline-flex;align-items:center;gap:6px;font-family:var(--fm);font-size:.60rem;color:var(--muted);margin-bottom:5px;">
             <input type="checkbox" class="cot-lote-check" style="width:auto;min-height:0;"> incluir no pedido aos fornecedores
           </label>
-          <div style="font-family:var(--fm);font-size:.62rem;color:var(--success);font-weight:800;letter-spacing:1px;">COTACAO DA PECA APROVADA</div>
+          <div style="font-family:var(--fm);font-size:.62rem;color:var(--success);font-weight:800;letter-spacing:1px;">COTACAO DA PECA DA O.S.</div>
           <div data-cot-item-title="1" style="font-size:.78rem;color:var(--text);font-weight:700;">${it.codigo ? '[' + escOS(it.codigo) + '] ' : ''}${escOS(it.desc || '-')}</div>
-          <small style="font-family:var(--fm);font-size:.62rem;color:var(--muted);">Qtd ${escOS(it.qtd || 1)} | valor aprovado ${moedaLocal(it.valorFinal || 0)}</small>
+          <small style="font-family:var(--fm);font-size:.62rem;color:var(--muted);">Qtd ${escOS(it.qtd || 1)} | valor orcado ${moedaLocal(it.valorFinal || 0)}</small>
         </div>
         <div class="cot-melhor-resumo" style="font-family:var(--fm);font-size:.66rem;color:${best ? 'var(--success)' : 'var(--muted)'};text-align:right;">
           ${cotacaoResumoMelhorHTML(best, moedaLocal)}
@@ -3311,24 +3499,79 @@ window.renderCotacaoPecasAprovadasOS = function(os, aprovados, moedaFn) {
       <div class="cot-opcoes-list" style="display:grid;gap:6px;">${opcoes.map((op, idx) => cotacaoOpcaoRowHTML(op, idx, it.key, bestId)).join('')}</div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;align-items:center;">
         <button type="button" class="btn-ghost" onclick="window.adicionarCotacaoOpcaoOS(this)">+ REGISTRAR RETORNO</button>
-        <button type="button" class="btn-primary" onclick="window.salvarCotacoesPecasOS('${escOS(os?.id || '')}')">SALVAR E ANALISAR</button>
-        <button type="button" class="btn-success" onclick="window.abrirEntradaNFCotacaoOS('${escOS(os?.id || '')}','${escOS(it.key)}')">ENTRADA NF / VINCULAR</button>
+        <button type="button" class="btn-primary" onclick="window.salvarCotacoesPecasOS('${osIdSeguro}')">SALVAR E ANALISAR</button>
+        <button type="button" class="btn-success" onclick="window.abrirEntradaNFCotacaoOS('${osIdSeguro}','${escOS(it.key)}')">ENTRADA NF / VINCULAR</button>
       </div>
     </div>`;
   }).join('');
   return `<div id="cotacaoPecasOS" style="margin-top:14px;border-top:1px solid rgba(255,255,255,.12);padding-top:12px;">
-    <div style="font-family:var(--fm);font-size:.72rem;color:var(--success);font-weight:800;letter-spacing:1px;margin-bottom:8px;">COTACAO E COMPRA DAS PECAS APROVADAS</div>
-    <div style="font-family:var(--fm);font-size:.60rem;color:var(--muted);margin-bottom:8px;">Fluxo interno. Cotar nao significa comprar; comprado nao significa instalado; instalacao depende da execucao.</div>
+    <div style="font-family:var(--fm);font-size:.72rem;color:var(--success);font-weight:800;letter-spacing:1px;margin-bottom:8px;">COTACAO E COMPRA DAS PECAS DA O.S.</div>
+    <div style="font-family:var(--fm);font-size:.60rem;color:var(--muted);margin-bottom:8px;">Fluxo interno desde o orcamento. Cotar nao significa comprar; comprado nao significa instalado; instalacao depende da execucao.</div>
+    ${avisoSalvar}
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;align-items:center;position:sticky;top:0;z-index:5;background:var(--surf,#fff);padding:8px;border:1px solid var(--border);border-radius:4px;">
       <span style="font-family:var(--fm);font-size:.62rem;color:var(--muted);font-weight:800;letter-spacing:.7px;">PEDIDO A FORNECEDORES</span>
       <label style="display:inline-flex;align-items:center;gap:6px;font-family:var(--fm);font-size:.64rem;color:var(--text);font-weight:800;">
         <input type="checkbox" onchange="window.toggleTodasPecasCotacao?.(this.checked)" style="width:auto;min-height:0;"> selecionar todas
       </label>
-      <button type="button" class="btn-outline" onclick="window.abrirCotacaoFornecedoresOSLote?.('${escOS(os?.id || '')}','marcadas')">ENVIAR MARCADAS</button>
-      <button type="button" class="btn-primary" onclick="window.abrirCotacaoFornecedoresOSLote?.('${escOS(os?.id || '')}','todos')">ENVIAR TODAS</button>
+      <button type="button" class="btn-outline" onclick="window.abrirCotacaoFornecedoresOSLote?.('${osIdSeguro}','marcadas')">ENVIAR MARCADAS</button>
+      <button type="button" class="btn-primary" onclick="window.abrirCotacaoFornecedoresOSLote?.('${osIdSeguro}','todos')">ENVIAR TODAS</button>
+      <button type="button" class="btn-ghost" onclick="window.exportarCotacaoFornecedoresOS?.()">EXPORTAR COTACAO</button>
     </div>
     ${blocos}
   </div>`;
+};
+
+window.pecasCotacaoDaTelaOS = function() {
+  const pecas = [];
+  document.querySelectorAll('#containerPecasOS [data-peca-avulsa="1"], #containerPecasOS > div:not(.cilia-peca-wrap)').forEach((row, idx) => {
+    const sel = row.querySelector('.peca-sel');
+    const opt = sel?.options?.[sel.selectedIndex];
+    const estoqueId = sel?.value || '';
+    const codigo = row.querySelector('.peca-codigo')?.value?.trim() || '';
+    const descLivre = row.querySelector('.peca-desc-livre')?.value?.trim() || '';
+    const desc = descLivre || (estoqueId ? (opt?.dataset?.desc || opt?.text || '') : '');
+    const qtd = numBR(row.querySelector('.peca-qtd')?.value || 1) || 1;
+    const unit = numBR(row.querySelector('.peca-venda')?.value || 0);
+    if (!desc && !codigo && !unit && !estoqueId) return;
+    pecas.push({ key: 'peca-' + idx, tipo: 'peca', codigo, desc: desc || 'Peca', qtd, valorUnit: unit, valorFinal: qtd * unit, estoqueId });
+  });
+  document.querySelectorAll('#containerPecasOS .cilia-peca-wrap').forEach((wrap, idx) => {
+    const row = wrap.querySelector('[data-cilia="1"], [data-peca-avulsa="1"]') || wrap;
+    const codigo = row.querySelector('.peca-codigo')?.value?.trim() || '';
+    const desc = row.querySelector('.peca-desc-livre')?.value?.trim() || wrap.dataset?.pecaDesc || '';
+    const qtd = numBR(row.querySelector('.peca-qtd')?.value || 1) || 1;
+    const unit = numBR(row.querySelector('.peca-venda')?.value || 0);
+    if (!desc && !codigo && !unit) return;
+    pecas.push({ key: 'peca-' + idx, tipo: 'peca', codigo, desc: desc || 'Peca Cilia', qtd, valorUnit: unit, valorFinal: qtd * unit, ciliaPieceIndex: wrap.dataset?.ciliaPieceIndex || '' });
+  });
+  return pecas;
+};
+
+window.atualizarCotacaoPecasOrcamentoAtualOS = function(osOpt) {
+  const slot = document.getElementById('cotacaoPecasOSSlot');
+  if (!slot || slot.dataset.renderLock === '1') return;
+  slot.dataset.renderLock = '1';
+  try {
+    const osId = document.getElementById('osId')?.value || '';
+    const salvo = osOpt || (window.J?.os || []).find(o => o.id === osId) || null;
+    const cliente = salvo ? (window.J?.clientes || []).find(c => c.id === salvo.clienteId) : null;
+    let pecas = [];
+    if (salvo && OSU().buildBudgetItems) {
+      try { pecas = (OSU().buildBudgetItems(salvo, cliente) || []).filter(it => it.tipo === 'peca'); } catch (_) { pecas = []; }
+    }
+    if (!pecas.length) pecas = window.pecasCotacaoDaTelaOS?.() || [];
+    const osBase = salvo || {
+      id: osId,
+      clienteId: document.getElementById('osCliente')?.value || '',
+      veiculoId: document.getElementById('osVeiculo')?.value || '',
+      placa: document.getElementById('osPlacaView')?.value || '',
+      prefixo: document.getElementById('osPrefixo')?.value || '',
+      tipoVeiculoOS: document.getElementById('osTipoVeiculo')?.value || ''
+    };
+    slot.innerHTML = pecas.length ? (window.renderCotacaoPecasAprovadasOS?.(osBase, pecas, moedaOS) || '') : '';
+  } finally {
+    setTimeout(() => { delete slot.dataset.renderLock; }, 80);
+  }
 };
 
 window.coletarCotacoesPecasOS = function() {
@@ -3375,7 +3618,7 @@ window.salvarCotacoesPecasOS = async function(osId) {
   const osAtual = (window.J?.os || []).find(o => o.id === osId) || {};
   const cotacoesPecas = Object.assign({}, cotacoesOSMap(osAtual), window.coletarCotacoesPecasOS());
   const timeline = Array.isArray(osAtual.timeline) ? osAtual.timeline.slice() : [];
-  timeline.push({ dt: new Date().toISOString(), user: window.J?.nome || 'Gestor', acao: 'Atualizou cotacoes de pecas aprovadas.', tipo: 'cotacao_pecas', interno: true });
+  timeline.push({ dt: new Date().toISOString(), user: window.J?.nome || 'Gestor', acao: 'Atualizou cotacoes de pecas da O.S.', tipo: 'cotacao_pecas', interno: true });
   await db.collection('ordens_servico').doc(osId).update(limparUndefinedFirestoreOS({
     cotacoesPecas,
     timeline,
@@ -3389,7 +3632,7 @@ window.salvarCotacoesPecasOS = async function(osId) {
   const totalValidas = Object.values(cotacoesPecas).reduce((acc, cot) => acc + ((cot.opcoes || []).filter(o => cotacaoValorOS(o.valorUnitario) > 0).length), 0);
   window.toast?.(`Cotacoes registradas e analisadas na O.S. (${totalValidas} valor(es) valido(s)).`, 'ok');
   if (typeof window.thiaAudit === 'function') {
-    window.thiaAudit('cotacao_pecas_os', 'ordens_servico', osId, null, cotacoesPecas, 'Atualizacao de cotacao de pecas aprovadas').catch(() => {});
+    window.thiaAudit('cotacao_pecas_os', 'ordens_servico', osId, null, cotacoesPecas, 'Atualizacao de cotacao de pecas da O.S.').catch(() => {});
   }
 };
 
@@ -3437,14 +3680,15 @@ window.abrirEntradaNFCotacaoOS = function(osId, key) {
     if (destino) { destino.value = 'os'; window._nfeProToggleDestino?.(destino); }
     window.calcNFTotal?.();
   }, 50);
-  window.toast?.('Entrada NF aberta com a peca aprovada e vinculada nesta O.S.', 'ok');
+  window.toast?.('Entrada NF aberta com a peca da O.S. vinculada.', 'ok');
 };
 
 window.aplicarMarcadoresAprovacaoOS = function(os) {
   const U = OSU();
   document.getElementById('resumoAprovacaoOS')?.remove();
   document.querySelectorAll('#containerServicosOS .aprovacao-item-badge,#containerPecasOS .aprovacao-item-badge').forEach(el => el.remove());
-  if (!U.hasApproval?.(os)) return;
+  const temAprovacaoOS = U.hasApproval?.(os);
+  if (!temAprovacaoOS) { window.atualizarCotacaoPecasOrcamentoAtualOS?.(os); return; }
   const keys = U.getApprovedKeys?.(os) || new Set();
   const badge = key => `<div class="aprovacao-item-badge" style="grid-column:1/-1;font-family:var(--fm);font-size:.62rem;letter-spacing:.8px;color:${keys.has(key) ? 'var(--success)' : 'var(--danger)'};border-top:1px dashed rgba(255,255,255,.12);padding-top:5px;margin-top:2px;">${keys.has(key) ? 'APROVADO NO ORÇAMENTO' : 'NÃO APROVADO - MANTIDO APENAS COMO HISTÓRICO'}</div>`;
 
@@ -3471,7 +3715,7 @@ window.aplicarMarcadoresAprovacaoOS = function(os) {
   const totalAprovado = os?.totalAprovado != null ? numBR(os.totalAprovado) : aprovados.reduce((sum, it) => sum + numBR(it.valorFinal), 0);
   const moeda = U.moeda || (v => 'R$ ' + numBR(v).toFixed(2).replace('.', ','));
   const exec = os?.execucaoItens || {};
-  const cotacaoHtml = window.renderCotacaoPecasAprovadasOS?.(os, aprovados, moeda) || '';
+  window.atualizarCotacaoPecasOrcamentoAtualOS?.(os);
   const execHtml = aprovados.length ? `
     <div style="margin-top:14px;border-top:1px solid rgba(255,255,255,.12);padding-top:12px;">
       <div style="font-family:var(--fm);font-size:.72rem;color:var(--cyan);font-weight:800;letter-spacing:1px;margin-bottom:8px;">EXECUÇÃO INTERNA DOS ITENS APROVADOS</div>
@@ -3497,8 +3741,7 @@ window.aplicarMarcadoresAprovacaoOS = function(os) {
       ${aprovados.map(it => `<div class="aprovacao-resumo-item"><strong style="color:var(--success);">APROVADO</strong><br>${escOS(it.labelTipo || it.tipo)} ${it.codigo ? '[' + escOS(it.codigo) + '] ' : ''}${escOS(it.desc || '-')}${it.tempo ? `<br><small>TMO ${String(it.tempo).replace('.', ',')}h</small>` : ''}<br><b>${moeda(it.valorFinal)}</b></div>`).join('')}
       ${historico.map(it => `<div class="aprovacao-resumo-item nao"><strong style="color:var(--warn);">NÃO APROVADO</strong><br>${escOS(it.labelTipo || it.tipo)} ${it.codigo ? '[' + escOS(it.codigo) + '] ' : ''}${escOS(it.desc || '-')}<br><small>Mantido no histórico do orçamento.</small></div>`).join('')}
     </div>
-    ${execHtml}
-    ${cotacaoHtml}`;
+    ${execHtml}`;
   const alvo = document.getElementById('containerServicosOS')?.closest('div');
   if (alvo) alvo.insertAdjacentElement('beforebegin', resumo);
 };
